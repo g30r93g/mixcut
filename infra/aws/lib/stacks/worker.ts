@@ -57,8 +57,8 @@ export class WorkerStack extends cdk.Stack {
         UPLOADS_BUCKET: props.uploadsBucket.bucketName,
         JOBS_QUEUE_URL: this.queue.queueUrl,
         // Supabase envs will be injected at deploy-time
-        SUPABASE_URL: process.env.SUPABASE_URL ?? "",
-        SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ?? ""
+        SUPABASE_URL: props.config.SUPABASE_URL,
+        SUPABASE_SERVICE_ROLE_KEY: props.config.SUPABASE_SERVICE_ROLE_KEY
       }
     });
 
@@ -81,8 +81,8 @@ export class WorkerStack extends cdk.Stack {
       environment: {
         UPLOADS_BUCKET: props.uploadsBucket.bucketName,
         OUTPUTS_BUCKET: props.outputsBucket.bucketName,
-        SUPABASE_URL: process.env.SUPABASE_URL ?? "",
-        SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ?? ""
+        SUPABASE_URL: props.config.SUPABASE_URL,
+        SUPABASE_SERVICE_ROLE_KEY: props.config.SUPABASE_SERVICE_ROLE_KEY
       }
     });
 

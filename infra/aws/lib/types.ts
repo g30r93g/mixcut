@@ -1,15 +1,20 @@
-import * as cdk from "aws-cdk-lib";
+import { StackProps } from "aws-cdk-lib";
 import { IBucket } from "aws-cdk-lib/aws-s3";
 import { IQueue } from "aws-cdk-lib/aws-sqs";
+import { ConfigProps } from "./config";
 
-export interface StorageStackProps extends cdk.StackProps {}
+export interface AwsEnvStackProps extends StackProps {
+  config: Readonly<ConfigProps>;
+};
 
-export interface WorkerStackProps extends cdk.StackProps {
+export interface StorageStackProps extends StackProps {}
+
+export interface WorkerStackProps extends AwsEnvStackProps {
   uploadsBucket: IBucket;
   outputsBucket: IBucket;
 }
 
-export interface ApiStackProps extends cdk.StackProps {
+export interface ApiStackProps extends AwsEnvStackProps {
   uploadsBucket: IBucket;
   queue: IQueue;
 }

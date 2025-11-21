@@ -1,8 +1,8 @@
 import * as cdk from "aws-cdk-lib";
 import {
-    LambdaIntegration,
-    PassthroughBehavior,
-    RestApi
+  LambdaIntegration,
+  PassthroughBehavior,
+  RestApi
 } from "aws-cdk-lib/aws-apigateway";
 import { Runtime } from "aws-cdk-lib/aws-lambda";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
@@ -39,8 +39,8 @@ export class ApiStack extends cdk.Stack {
       environment: {
         UPLOADS_BUCKET: props.uploadsBucket.bucketName,
         JOBS_QUEUE_URL: props.queue.queueUrl,
-        SUPABASE_URL: process.env.SUPABASE_URL ?? "",
-        SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ?? ""
+        SUPABASE_URL: props.config.SUPABASE_URL,
+        SUPABASE_SERVICE_ROLE_KEY: props.config.SUPABASE_SERVICE_ROLE_KEY
       }
     });
 
