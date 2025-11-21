@@ -1,0 +1,136 @@
+import type { SQSEvent, SQSRecord } from "aws-lambda";
+import { execFile } from "node:child_process";
+import { promises as fs } from "node:fs";
+import * as path from "node:path";
+import { promisify } from "node:util";
+
+import { downloadToFile, listFiles, uploadFile } from "./lib/fs-utils";
+import { supabase } from "./lib/supabase";
+import { JobTrackRow, WorkerMessage } from "./lib/types";
+
+const execFileAsync = promisify(execFile);
+
+const OUTPUTS_BUCKET = process.env.OUTPUTS_BUCKET!;
+if (!OUTPUTS_BUCKET) {
+  throw new Error("OUTPUTS_BUCKET must be set");
+}
+
+export const handler = async (event: SQSEvent) => {
+  // We configured batchSize: 1, but let's be safe and loop
+  for (const record of event.Records) {
+    await handleRecord(record);
+  }
+};
+
+async function handleRecord(record: SQSRecord) {
+  const msg: WorkerMessage = JSON.parse(record.body);
+
+  const { jobId, audioBucket, audioKey, cueBucket, cueKey } = msg;
+
+  try {
+    // 1) Mark job PROCESSING
+    await updateJob(jobId, {
+      status: "PROCESSING"
+    });
+
+    // 2) Prepare working directory in /tmp
+    const workDir = path.join("/tmp", `job-${jobId}`);
+    await fs.rm(workDir, { recursive: true, force: true });
+    await fs.mkdir(workDir, { recursive: true });
+
+    const audioPath = path.join(workDir, "source.m4a");
+    const cuePath = path.join(workDir, "source.cue");
+
+    // 3) Download source files
+    await Promise.all([
+      downloadToFile(audioBucket, audioKey, audioPath),
+      downloadToFile(cueBucket, cueKey, cuePath)
+    ]);
+
+    // 4) Run m4acut in that directory
+    // m4acut will emit track files in the current working directory
+    await execFileAsync("m4acut", ["-C", cuePath, audioPath], {
+      cwd: workDir
+    });
+
+    // 5) List output .m4a files (excluding source.m4a)
+    const allFiles = await listFiles(workDir);
+    const outputFiles = allFiles
+      .filter((p) => p.endsWith(".m4a") && !p.endsWith("source.m4a"))
+      .sort(); // rely on m4acut naming order (usually track order)
+
+    // 6) Load existing tracks for job from Supabase
+    const { data: tracks, error: tracksErr } = await supabase
+      .from("job_tracks")
+      .select("*")
+      .eq("job_id", jobId)
+      .order("track_number", { ascending: true });
+
+    if (tracksErr) {
+      throw tracksErr;
+    }
+
+    const typedTracks = (tracks ?? []) as JobTrackRow[];
+
+    if (typedTracks.length !== outputFiles.length) {
+      throw new Error(
+        `Track count mismatch: have ${typedTracks.length} tracks but ${outputFiles.length} output files`
+      );
+    }
+
+    const outputPrefix = `jobs/${jobId}`;
+
+    // 7) Upload each file and update tracks
+    for (let i = 0; i < typedTracks.length; i++) {
+      const track = typedTracks[i];
+      const filePath = outputFiles[i];
+      const fileName = path.basename(filePath);
+
+      const outKey = `${outputPrefix}/${fileName}`;
+
+      await uploadFile(OUTPUTS_BUCKET, outKey, filePath);
+
+      const { error: updateTrackErr } = await supabase
+        .from("job_tracks")
+        .update({
+          output_key: outKey
+        })
+        .eq("id", track.id);
+
+      if (updateTrackErr) throw updateTrackErr;
+    }
+
+    // 8) Mark job COMPLETED, saving output location
+    await updateJob(jobId, {
+      status: "COMPLETED",
+      output_bucket: OUTPUTS_BUCKET,
+      output_prefix: outputPrefix
+    });
+  } catch (err: any) {
+    console.error("Worker error for job", jobId, err);
+    await updateJob(jobId, {
+      status: "FAILED",
+      error_message: err?.message ?? "Unknown error in worker"
+    });
+    // Let the Lambda succeed, so SQS doesn't keep retrying forever.
+    // If you want retries, rethrow here instead.
+  } finally {
+    // Best-effort clean up
+    const workDir = path.join("/tmp", `job-${jobId}`);
+    await fs.rm(workDir, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
+async function updateJob(jobId: string, patch: Record<string, any>) {
+  const { error } = await supabase
+    .from("jobs")
+    .update({
+      ...patch,
+      updated_at: new Date().toISOString()
+    })
+    .eq("id", jobId);
+
+  if (error) {
+    throw error;
+  }
+}

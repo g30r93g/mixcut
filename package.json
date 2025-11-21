@@ -1,0 +1,24 @@
+{
+  "name": "mixcut",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.18.2",
+  "scripts": {
+    "build": "pnpm run -r build",
+    "lint": "pnpm run -r lint",
+    "test": "pnpm run -r test",
+
+    "infra:deploy": "pnpm -F @mixcut/aws-infra cdk deploy",
+    "infra:diff": "pnpm -F @mixcut/aws-infra cdk diff",
+    "infra:synth": "pnpm -F @mixcut/aws-infra cdk synth",
+
+    "worker:bundle": "pnpm -F worker build",
+    "validator:bundle": "pnpm -F validator build",
+
+    "website:dev": "pnpm -F website dev"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.3"
+  }
+}

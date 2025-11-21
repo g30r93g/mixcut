@@ -1,0 +1,20 @@
+{
+    "name": "@mixcut/validator-lambda",
+    "version": "0.1.0",
+    "main": "dist/handler.js",
+    "scripts": {
+        "build": "tsc -p tsconfig.json",
+        "clean": "rm -rf dist"
+    },
+    "dependencies": {
+        "@aws-sdk/client-s3": "^3.600.0",
+        "@aws-sdk/client-sqs": "^3.600.0",
+        "@supabase/supabase-js": "^2.45.0",
+        "parser": "*",
+        "shared": "*"
+    },
+    "devDependencies": {
+        "@types/node": "^22.0.0",
+        "typescript": "^5.6.3"
+    }
+}

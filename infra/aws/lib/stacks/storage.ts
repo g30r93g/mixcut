@@ -1,0 +1,38 @@
+import * as cdk from "aws-cdk-lib";
+import { BlockPublicAccess, Bucket, BucketEncryption } from "aws-cdk-lib/aws-s3";
+import { Construct } from "constructs";
+import { StorageStackProps } from "../types";
+
+export class StorageStack extends cdk.Stack {
+  readonly uploadsBucket: Bucket;
+  readonly outputsBucket: Bucket;
+
+  constructor(scope: Construct, id: string, props: StorageStackProps) {
+    super(scope, id, props);
+
+    this.uploadsBucket = new Bucket(this, "UploadsBucket", {
+      bucketName: undefined, // let AWS generate; or prefix if you want
+      blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
+      encryption: BucketEncryption.S3_MANAGED,
+      enforceSSL: true,
+      versioned: false,
+      eventBridgeEnabled: true
+    });
+
+    this.outputsBucket = new Bucket(this, "OutputsBucket", {
+      bucketName: undefined,
+      blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
+      encryption: BucketEncryption.S3_MANAGED,
+      enforceSSL: true,
+      versioned: false,
+      eventBridgeEnabled: true
+    });
+
+    new cdk.CfnOutput(this, "UploadsBucketName", {
+      value: this.uploadsBucket.bucketName
+    });
+    new cdk.CfnOutput(this, "OutputsBucketName", {
+      value: this.outputsBucket.bucketName
+    });
+  }
+}

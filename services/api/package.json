@@ -1,0 +1,23 @@
+{
+  "name": "@mixcut/api",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/handler.js",
+  "types": "dist/handler.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.600.0",
+    "@aws-sdk/s3-request-presigner": "^3.600.0",
+    "@aws-sdk/client-lambda": "^3.600.0",
+    "@supabase/supabase-js": "^2.45.0",
+    "shared": "*"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.138",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.3"
+  }
+}

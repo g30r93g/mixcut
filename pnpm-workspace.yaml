@@ -1,0 +1,9 @@
+packages:
+  - infra/aws
+  - parser
+  - services/*
+  - shared
+  - website
+
+onlyBuiltDependencies:
+  - bson
