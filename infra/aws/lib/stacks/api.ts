@@ -51,6 +51,12 @@ export class ApiStack extends cdk.Stack {
       restApiName: "mixcut-api",
       deployOptions: {
         stageName: "prod"
+      },
+      defaultCorsPreflightOptions: {
+        allowOrigins: ["http://localhost:3000"],
+        allowMethods: ["OPTIONS", "GET", "POST"],
+        allowHeaders: ["Content-Type"],
+        statusCode: 200
       }
     });
 
