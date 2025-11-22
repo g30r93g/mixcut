@@ -15,6 +15,7 @@ import { WorkerStackProps } from "../types";
 
 export class WorkerStack extends cdk.Stack {
   readonly queue: Queue;
+  readonly validatorFunction: NodejsFunction;
 
   constructor(scope: Construct, id: string, props: WorkerStackProps) {
     super(scope, id, props);
@@ -36,7 +37,7 @@ export class WorkerStack extends cdk.Stack {
     });
 
     // Validator Lambda
-    const validatorFn = new NodejsFunction(this, "ValidatorFunction", {
+    this.validatorFunction = new NodejsFunction(this, "ValidatorFunction", {
       entry: join(
         __dirname,
         "..",
@@ -62,8 +63,8 @@ export class WorkerStack extends cdk.Stack {
       }
     });
 
-    props.uploadsBucket.grantRead(validatorFn);
-    this.queue.grantSendMessages(validatorFn);
+    props.uploadsBucket.grantRead(this.validatorFunction);
+    this.queue.grantSendMessages(this.validatorFunction);
 
     // Worker Lambda (Docker image with m4acut)
     const workerLogGroup = new LogGroup(this, "WorkerLogGroup", {

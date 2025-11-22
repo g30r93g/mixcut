@@ -27,7 +27,8 @@ const api = new ApiStack(app, "MixcutApiStack", {
   env,
   config,
   uploadsBucket: storage.uploadsBucket,
-  queue: worker.queue
+  queue: worker.queue,
+  validatorFunction: worker.validatorFunction
 });
 api.addDependency(storage);
 api.addDependency(worker);

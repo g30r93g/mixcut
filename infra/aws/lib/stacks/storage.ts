@@ -1,5 +1,10 @@
 import * as cdk from "aws-cdk-lib";
-import { BlockPublicAccess, Bucket, BucketEncryption } from "aws-cdk-lib/aws-s3";
+import {
+  BlockPublicAccess,
+  Bucket,
+  BucketEncryption,
+  HttpMethods
+} from "aws-cdk-lib/aws-s3";
 import { Construct } from "constructs";
 import { StorageStackProps } from "../types";
 
@@ -16,7 +21,15 @@ export class StorageStack extends cdk.Stack {
       encryption: BucketEncryption.S3_MANAGED,
       enforceSSL: true,
       versioned: false,
-      eventBridgeEnabled: true
+      eventBridgeEnabled: true,
+      cors: [
+        {
+          allowedMethods: [HttpMethods.PUT, HttpMethods.GET],
+          allowedOrigins: ["http://localhost:3000"],
+          allowedHeaders: ["*"],
+          exposedHeaders: ["ETag"]
+        }
+      ]
     });
 
     this.outputsBucket = new Bucket(this, "OutputsBucket", {
@@ -25,7 +38,15 @@ export class StorageStack extends cdk.Stack {
       encryption: BucketEncryption.S3_MANAGED,
       enforceSSL: true,
       versioned: false,
-      eventBridgeEnabled: true
+      eventBridgeEnabled: true,
+      cors: [
+        {
+          allowedMethods: [HttpMethods.GET],
+          allowedOrigins: ["http://localhost:3000"],
+          allowedHeaders: ["*"],
+          exposedHeaders: ["ETag"]
+        }
+      ]
     });
 
     new cdk.CfnOutput(this, "UploadsBucketName", {

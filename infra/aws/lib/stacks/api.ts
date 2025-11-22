@@ -40,9 +40,12 @@ export class ApiStack extends cdk.Stack {
         UPLOADS_BUCKET: props.uploadsBucket.bucketName,
         JOBS_QUEUE_URL: props.queue.queueUrl,
         SUPABASE_URL: props.config.SUPABASE_URL,
-        SUPABASE_SERVICE_ROLE_KEY: props.config.SUPABASE_SERVICE_ROLE_KEY
+        SUPABASE_SERVICE_ROLE_KEY: props.config.SUPABASE_SERVICE_ROLE_KEY,
+        VALIDATOR_FUNCTION_NAME: props.validatorFunction.functionName
       }
     });
+
+    props.validatorFunction.grantInvoke(jobApiFn);
 
     props.uploadsBucket.grantReadWrite(jobApiFn);
     props.queue.grantSendMessages(jobApiFn);

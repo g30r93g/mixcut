@@ -1,4 +1,5 @@
 import { StackProps } from "aws-cdk-lib";
+import { IFunction } from "aws-cdk-lib/aws-lambda";
 import { IBucket } from "aws-cdk-lib/aws-s3";
 import { IQueue } from "aws-cdk-lib/aws-sqs";
 import { ConfigProps } from "./config";
@@ -17,4 +18,5 @@ export interface WorkerStackProps extends AwsEnvStackProps {
 export interface ApiStackProps extends AwsEnvStackProps {
   uploadsBucket: IBucket;
   queue: IQueue;
+  validatorFunction: IFunction;
 }
