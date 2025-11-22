@@ -38,10 +38,15 @@ const statusCopy: Record<JobStatus, string> = {
   [JobStatus.FAILED]: 'Failed',
 };
 
-function buildDownloadUrl(bucket: string | null, key: string | null) {
+function buildDownloadUrl(
+  bucket: string | null,
+  key: string | null,
+  region = process.env.NEXT_PUBLIC_S3_REGION ?? 'eu-west-2'
+) {
   if (!key) return null;
-  if (downloadBase) return `${downloadBase}/${key}`;
-  if (bucket) return `https://${bucket}.s3.amazonaws.com/${key}`;
+  const safeKey = key.replace(/ /g, '+');
+  if (downloadBase) return `${downloadBase}/${safeKey}`;
+  if (bucket) return `https://${bucket}.s3.${region}.amazonaws.com/${safeKey}`;
   return null;
 }
 
