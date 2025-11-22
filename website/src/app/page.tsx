@@ -13,8 +13,9 @@ import {
   DropzoneContent,
   DropzoneEmptyState,
 } from '@/components/ui/shadcn-io/dropzone';
+import { parseCue, validateCue } from '@mixcut/parser';
 import type { CreateJobResponse } from '@mixcut/shared';
-import { AlertTriangle, Loader2, Scissors, Upload } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Loader2, Scissors, Upload } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useMemo, useState } from 'react';
 
@@ -49,12 +50,27 @@ export default function UploadPage() {
   const [jobId, setJobId] = useState<string | null>(null);
   const [stage, setStage] = useState<Stage>('idle');
   const [error, setError] = useState<string | null>(null);
+  const [cueValid, setCueValid] = useState<boolean | null>(null);
 
   const isBusy = stage === 'creating' || stage === 'uploading' || stage === 'starting';
 
   const handleUpload = useCallback(async () => {
     if (!audioFile || !cueFile) {
       setError('Please select both an .m4a file and its matching .cue file.');
+      return;
+    }
+
+    try {
+      const cueText = await cueFile.text();
+      const parsed = parseCue(cueText);
+      const validation = validateCue(parsed);
+      if (!validation.ok) {
+        throw new Error(validation.error || 'Invalid CUE sheet');
+      }
+      setCueValid(true);
+    } catch (err: any) {
+      setCueValid(false);
+      setError(err?.message || 'Invalid CUE sheet');
       return;
     }
 
@@ -175,6 +191,17 @@ export default function UploadPage() {
             <div className="text-sm text-muted-foreground">
               {jobId ? `Ready to start job ${jobId}` : 'We will name your uploads source.m4a/source.cue under the job prefix.'}
             </div>
+            {cueValid === true ? (
+              <div className="flex items-center gap-2 rounded-md bg-emerald-50 px-3 py-2 text-emerald-700 text-sm">
+                <CheckCircle2 className="size-4" />
+                CUE sheet valid
+              </div>
+            ): cueValid === false ? (
+              <div className="flex items-center gap-2 rounded-md bg-destructive/10 px-3 py-2 text-destructive text-sm">
+                <AlertTriangle className="size-4" />
+                CUE sheet invalid
+              </div>
+            ) : <></>}
             <Button disabled={actionDisabled} onClick={onAction} size="lg">
               {isBusy ? (
                 <Loader2 className="size-4 animate-spin" />

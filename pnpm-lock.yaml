@@ -145,6 +145,9 @@ importers:
 
   website:
     dependencies:
+      '@mixcut/parser':
+        specifier: workspace:*
+        version: link:../parser
       '@mixcut/shared':
         specifier: workspace:*
         version: link:../shared

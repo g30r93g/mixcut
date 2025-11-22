@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@mixcut/parser": "workspace:*",
     "@mixcut/shared": "workspace:*",
     "@radix-ui/react-slot": "^1.2.4",
     "@supabase/ssr": "^0.7.0",
