@@ -34,7 +34,8 @@ export class StorageStack extends cdk.Stack {
 
     this.outputsBucket = new Bucket(this, "OutputsBucket", {
       bucketName: undefined,
-      blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
+      publicReadAccess: true,
+      blockPublicAccess: BlockPublicAccess.BLOCK_ACLS,
       encryption: BucketEncryption.S3_MANAGED,
       enforceSSL: true,
       versioned: false,
