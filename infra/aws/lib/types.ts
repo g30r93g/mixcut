@@ -17,6 +17,7 @@ export interface WorkerStackProps extends AwsEnvStackProps {
 
 export interface ApiStackProps extends AwsEnvStackProps {
   uploadsBucket: IBucket;
+  outputsBucket: IBucket;
   queue: IQueue;
   validatorFunction: IFunction;
 }

@@ -1,16 +1,5 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useParams } from 'next/navigation';
-import {
-  AlertTriangle,
-  CheckCircle2,
-  Clock,
-  Download as DownloadIcon,
-  Loader2,
-} from 'lucide-react';
-import type { JobStatusResponse, Track } from '@mixcut/shared';
-import { JobStatus } from '@mixcut/shared';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -19,6 +8,17 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import type { JobStatusResponse, Track } from '@mixcut/shared';
+import { JobStatus } from '@mixcut/shared';
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Clock,
+  Download as DownloadIcon,
+  Loader2,
+} from 'lucide-react';
+import { useParams } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 const apiBase = (
   process.env.NEXT_PUBLIC_GATEWAY_URL ??
@@ -139,21 +139,29 @@ export default function JobPage() {
     );
   }, [jobState]);
 
-  const downloadTracks = useCallback(() => {
+  const downloadTracks = useCallback(async () => {
     if (!jobState) return;
-
     setIsDownloading(true);
 
-    jobState.tracks.forEach((track, index) => {
-      const url = buildDownloadUrl(jobState.job.output_bucket, track.output_key);
-      if (url) {
-        setTimeout(() => {
-          window.open(url, '_blank', 'noopener,noreferrer');
-        }, index * 150);
+    try {
+      const response = await fetch(apiUrl(`/jobs/${jobState.job.id}/bundle`));
+      if (!response.ok) {
+        const message = await response.text();
+        throw new Error(message || 'Failed to create download bundle');
       }
-    });
 
-    setTimeout(() => setIsDownloading(false), Math.max(300, jobState.tracks.length * 150));
+      const payload = (await response.json()) as { url: string };
+      if (payload.url) {
+        window.location.href = payload.url;
+      } else {
+        throw new Error('Missing bundle URL');
+      }
+    } catch (err: any) {
+      console.error(err);
+      setError(err?.message || 'Failed to download tracks');
+    } finally {
+      setIsDownloading(false);
+    }
   }, [jobState]);
 
   if (!jobId) {
@@ -230,7 +238,6 @@ export default function JobPage() {
                   <th className="px-4 py-3 text-left font-medium">Title</th>
                   <th className="px-4 py-3 text-left font-medium">Performer</th>
                   <th className="px-4 py-3 text-left font-medium">Status</th>
-                  <th className="px-4 py-3 text-left font-medium text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -258,17 +265,6 @@ export default function JobPage() {
                           )}
                           {label}
                         </span>
-                      </td>
-                      <td className="px-4 py-3 align-top text-right">
-                        {downloadUrl ? (
-                          <Button asChild size="sm" variant="outline">
-                            <a download href={downloadUrl} rel="noopener noreferrer" target="_blank">
-                              <DownloadIcon className="size-4" /> Download
-                            </a>
-                          </Button>
-                        ) : (
-                          <span className="text-muted-foreground text-xs">{label}</span>
-                        )}
                       </td>
                     </tr>
                   );

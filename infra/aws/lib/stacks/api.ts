@@ -48,6 +48,7 @@ export class ApiStack extends cdk.Stack {
     props.validatorFunction.grantInvoke(jobApiFn);
 
     props.uploadsBucket.grantReadWrite(jobApiFn);
+    props.outputsBucket.grantReadWrite(jobApiFn);
     props.queue.grantSendMessages(jobApiFn);
 
     const api = new RestApi(this, "MixcutApi", {
@@ -79,6 +80,10 @@ export class ApiStack extends cdk.Stack {
     // /jobs/{id}/start – trigger validation
     const start = jobById.addResource("start");
     start.addMethod("POST", jobIntegration);
+
+    // /jobs/{id}/bundle – generate zip of outputs
+    const bundle = jobById.addResource("bundle");
+    bundle.addMethod("GET", jobIntegration);
 
     new cdk.CfnOutput(this, "ApiUrl", {
       value: api.url

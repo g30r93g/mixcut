@@ -2,6 +2,7 @@ import type {
   APIGatewayProxyEvent,
   APIGatewayProxyResult
 } from "aws-lambda";
+import { handleBundleJob } from "./handlers/bundle-job";
 import { handleCreateJob } from "./handlers/create-job";
 import { handleGetJob } from "./handlers/get-job";
 import { handleStartJob } from "./handlers/start-job";
@@ -38,6 +39,13 @@ export async function handler(
     if (resource === "/jobs/{id}/start") {
       if (httpMethod === "POST") {
         return handleStartJob(event);
+      }
+      return methodNotAllowed();
+    }
+
+    if (resource === "/jobs/{id}/bundle") {
+      if (httpMethod === "GET") {
+        return handleBundleJob(event);
       }
       return methodNotAllowed();
     }
