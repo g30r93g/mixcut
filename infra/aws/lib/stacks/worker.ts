@@ -60,7 +60,7 @@ export class WorkerStack extends cdk.Stack {
         // Supabase envs will be injected at deploy-time
         SUPABASE_URL: props.config.SUPABASE_URL,
         SUPABASE_SERVICE_ROLE_KEY: props.config.SUPABASE_SERVICE_ROLE_KEY
-      }
+      },
     });
 
     props.uploadsBucket.grantRead(this.validatorFunction);
@@ -73,7 +73,10 @@ export class WorkerStack extends cdk.Stack {
 
     const workerFn = new DockerImageFunction(this, "WorkerFunction", {
       code: DockerImageCode.fromImageAsset(
-        join(__dirname, "..", "..", "..", "..", "services", "worker")
+        join(__dirname, "..", "..", "..", "..", "services", "worker"),
+        {
+          platform: cdk.aws_ecr_assets.Platform.LINUX_AMD64
+        }
       ),
       timeout: cdk.Duration.minutes(15),
       memorySize: 2048,

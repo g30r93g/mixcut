@@ -1,0 +1,278 @@
+'use client';
+
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useParams } from 'next/navigation';
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Clock,
+  Download as DownloadIcon,
+  Loader2,
+} from 'lucide-react';
+import type { JobStatusResponse, Track } from '@mixcut/shared';
+import { JobStatus } from '@mixcut/shared';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+
+const apiBase = (
+  process.env.NEXT_PUBLIC_GATEWAY_URL ??
+  'https://nti1l1oe3f.execute-api.eu-west-2.amazonaws.com/prod'
+).replace(/\/$/, '');
+const apiUrl = (path: string) => `${apiBase}${path}`;
+const downloadBase = (process.env.NEXT_PUBLIC_DOWNLOAD_BASE_URL ?? '').replace(/\/$/, '');
+
+const pollIntervalMs = 4000;
+
+const statusCopy: Record<JobStatus, string> = {
+  [JobStatus.PENDING_UPLOAD]: 'Waiting for upload',
+  [JobStatus.VALIDATING]: 'Validating CUE sheet',
+  [JobStatus.QUEUED]: 'Queued for cutting',
+  [JobStatus.PROCESSING]: 'Processing tracks',
+  [JobStatus.COMPLETED]: 'Completed',
+  [JobStatus.FAILED]: 'Failed',
+};
+
+function buildDownloadUrl(bucket: string | null, key: string | null) {
+  if (!key) return null;
+  if (downloadBase) return `${downloadBase}/${key}`;
+  if (bucket) return `https://${bucket}.s3.amazonaws.com/${key}`;
+  return null;
+}
+
+function trackStatus(jobStatus: JobStatus, track: Track) {
+  if (jobStatus === JobStatus.FAILED) return 'Failed';
+  if (track.output_key) return 'Completed';
+
+  switch (jobStatus) {
+    case JobStatus.VALIDATING:
+      return 'Validating';
+    case JobStatus.QUEUED:
+      return 'Queued';
+    case JobStatus.PROCESSING:
+      return 'Processing';
+    default:
+      return 'Pending';
+  }
+}
+
+function statusClass(label: string) {
+  switch (label) {
+    case 'Completed':
+      return 'text-emerald-600 bg-emerald-100';
+    case 'Failed':
+      return 'text-red-600 bg-red-100';
+    case 'Validating':
+    case 'Processing':
+      return 'text-blue-600 bg-blue-100';
+    case 'Queued':
+      return 'text-amber-600 bg-amber-100';
+    default:
+      return 'text-muted-foreground bg-accent/50';
+  }
+}
+
+export default function JobPage() {
+  const params = useParams<{ jobId: string }>();
+  const jobId = params?.jobId;
+  const [jobState, setJobState] = useState<JobStatusResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isDownloading, setIsDownloading] = useState<boolean>(false);
+
+  const fetchStatus = useCallback(async () => {
+    if (!jobId) return;
+    try {
+      const response = await fetch(apiUrl(`/jobs/${jobId}`));
+
+      if (!response.ok) {
+        const message = await response.text();
+        throw new Error(message || 'Failed to load job');
+      }
+
+      const payload = (await response.json()) as JobStatusResponse;
+      setJobState(payload);
+      setError(null);
+      setIsLoading(false);
+    } catch (err: any) {
+      console.error(err);
+      setError(err?.message || 'Failed to load job');
+      setIsLoading(false);
+    }
+  }, [jobId]);
+
+  useEffect(() => {
+    fetchStatus();
+  }, [fetchStatus]);
+
+  useEffect(() => {
+    if (
+      !jobId ||
+      jobState?.job.status === JobStatus.COMPLETED ||
+      jobState?.job.status === JobStatus.FAILED
+    ) {
+      return;
+    }
+
+    const timer = setInterval(() => {
+      fetchStatus();
+    }, pollIntervalMs);
+
+    return () => clearInterval(timer);
+  }, [fetchStatus, jobState?.job.status]);
+
+  const allDone = useMemo(() => {
+    if (!jobState) return false;
+    return (
+      jobState.job.status === JobStatus.COMPLETED &&
+      jobState.tracks.every((track) => Boolean(track.output_key))
+    );
+  }, [jobState]);
+
+  const downloadTracks = useCallback(() => {
+    if (!jobState) return;
+
+    setIsDownloading(true);
+
+    jobState.tracks.forEach((track, index) => {
+      const url = buildDownloadUrl(jobState.job.output_bucket, track.output_key);
+      if (url) {
+        setTimeout(() => {
+          window.open(url, '_blank', 'noopener,noreferrer');
+        }, index * 150);
+      }
+    });
+
+    setTimeout(() => setIsDownloading(false), Math.max(300, jobState.tracks.length * 150));
+  }, [jobState]);
+
+  if (!jobId) {
+    return null;
+  }
+
+  if (isLoading && !jobState) {
+    return (
+      <main className="flex h-full items-center justify-center py-10">
+        <Loader2 className="size-6 animate-spin text-muted-foreground" />
+      </main>
+    );
+  }
+
+  if (error && !jobState) {
+    return (
+      <main className="mx-auto max-w-3xl px-4 py-10">
+        <div className="flex items-center gap-2 rounded-md bg-destructive/10 p-4 text-destructive">
+          <AlertTriangle className="size-4" />
+          <p className="text-sm">{error}</p>
+        </div>
+      </main>
+    );
+  }
+
+  const jobStatusLabel = jobState ? statusCopy[jobState.job.status] : '';
+  const terminal = jobState?.job.status === JobStatus.COMPLETED || jobState?.job.status === JobStatus.FAILED;
+
+  return (
+    <main className="mx-auto flex max-w-5xl flex-col gap-8 px-4 py-10">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-4">
+          <div>
+            <CardTitle className="text-2xl">Job {jobId}</CardTitle>
+            <CardDescription>{jobStatusLabel}</CardDescription>
+          </div>
+          {jobState?.job.status === JobStatus.FAILED && (
+            <div className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="size-4" />
+              <span className="text-sm">{jobState.job.error_message ?? 'Something went wrong.'}</span>
+            </div>
+          )}
+          {allDone && (
+            <Button disabled={isDownloading} onClick={downloadTracks} size="lg">
+              {isDownloading ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <DownloadIcon className="size-4" />
+              )}
+              Download tracks
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          {!terminal && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Clock className="size-4" />
+              Polling for updates…
+            </div>
+          )}
+
+          {error && jobState && (
+            <div className="flex items-center gap-2 rounded-md bg-destructive/10 p-3 text-destructive">
+              <AlertTriangle className="size-4" />
+              <p className="text-sm">{error}</p>
+            </div>
+          )}
+
+          <div className="overflow-hidden rounded-lg border">
+            <table className="min-w-full divide-y divide-border text-sm">
+              <thead className="bg-muted/50">
+                <tr>
+                  <th className="px-4 py-3 text-left font-medium">#</th>
+                  <th className="px-4 py-3 text-left font-medium">Title</th>
+                  <th className="px-4 py-3 text-left font-medium">Performer</th>
+                  <th className="px-4 py-3 text-left font-medium">Status</th>
+                  <th className="px-4 py-3 text-left font-medium text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {jobState?.tracks.map((track) => {
+                  const label = trackStatus(jobState.job.status, track);
+                  const downloadUrl = buildDownloadUrl(jobState.job.output_bucket, track.output_key);
+
+                  return (
+                    <tr key={track.id} className="hover:bg-muted/30">
+                      <td className="px-4 py-3 align-top font-mono text-xs text-muted-foreground">
+                        {track.track_number}
+                      </td>
+                      <td className="px-4 py-3 align-top">{track.title}</td>
+                      <td className="px-4 py-3 align-top text-muted-foreground">
+                        {track.performer ?? '—'}
+                      </td>
+                      <td className="px-4 py-3 align-top">
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ${statusClass(label)}`}>
+                          {label === 'Completed' ? (
+                            <CheckCircle2 className="size-3" />
+                          ) : label === 'Failed' ? (
+                            <AlertTriangle className="size-3" />
+                          ) : (
+                            <Loader2 className="size-3 animate-spin" />
+                          )}
+                          {label}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 align-top text-right">
+                        {downloadUrl ? (
+                          <Button asChild size="sm" variant="outline">
+                            <a download href={downloadUrl} rel="noopener noreferrer" target="_blank">
+                              <DownloadIcon className="size-4" /> Download
+                            </a>
+                          </Button>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">{label}</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+    </main>
+  );
+}
