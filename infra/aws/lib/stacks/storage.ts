@@ -31,6 +31,9 @@ export class StorageStack extends cdk.Stack {
         }
       ]
     });
+    this.uploadsBucket.addLifecycleRule({
+      expiration: cdk.Duration.days(1)
+    });
 
     this.outputsBucket = new Bucket(this, "OutputsBucket", {
       bucketName: undefined,
@@ -48,6 +51,9 @@ export class StorageStack extends cdk.Stack {
           exposedHeaders: ["ETag"]
         }
       ]
+    });
+    this.outputsBucket.addLifecycleRule({
+      expiration: cdk.Duration.days(1)
     });
 
     new cdk.CfnOutput(this, "UploadsBucketName", {
