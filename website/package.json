@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint"
   },
+  "packageManager": "pnpm@10.18.2",
   "dependencies": {
     "@mixcut/parser": "workspace:*",
     "@mixcut/shared": "workspace:*",
