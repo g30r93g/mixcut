@@ -91,9 +91,10 @@ export default function UploadPage() {
         }
         setCueValid(true);
         setError(null);
-      } catch (err: any) {
+      } catch (err: unknown) {
         setCueValid(false);
-        setError(err?.message || 'Invalid CUE sheet');
+        const message = err instanceof Error ? err.message : 'Invalid CUE sheet';
+        setError(message);
       }
     };
 
@@ -138,14 +139,15 @@ export default function UploadPage() {
       setStage('uploaded');
       setAudioProgress(100);
       setCueProgress(100);
-    } catch (err: any) {
-      console.error(err);
-      setError(err?.message || 'Upload failed');
-      setAudioProgress(null);
-      setCueProgress(null);
-      setStage('idle');
-    }
-  }, [audioFile, cueFile]);
+      } catch (err: unknown) {
+        console.error(err);
+        const message = err instanceof Error ? err.message : 'Upload failed';
+        setError(message);
+        setAudioProgress(null);
+        setCueProgress(null);
+        setStage('idle');
+      }
+  }, [audioFile, cueFile, cueValid]);
 
   const handleStart = useCallback(async () => {
     if (!jobId) return;
@@ -163,9 +165,10 @@ export default function UploadPage() {
       }
 
       router.push(`/job/${jobId}`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setError(err?.message || 'Failed to start processing');
+      const message = err instanceof Error ? err.message : 'Failed to start processing';
+      setError(message);
       setStage('uploaded');
     }
   }, [jobId, router]);

@@ -25,7 +25,6 @@ const apiBase = (
   'https://nti1l1oe3f.execute-api.eu-west-2.amazonaws.com/prod'
 ).replace(/\/$/, '');
 const apiUrl = (path: string) => `${apiBase}${path}`;
-const downloadBase = (process.env.NEXT_PUBLIC_DOWNLOAD_BASE_URL ?? '').replace(/\/$/, '');
 
 const pollIntervalMs = 4000;
 
@@ -37,18 +36,6 @@ const statusCopy: Record<JobStatus, string> = {
   [JobStatus.COMPLETED]: 'Completed',
   [JobStatus.FAILED]: 'Failed',
 };
-
-function buildDownloadUrl(
-  bucket: string | null,
-  key: string | null,
-  region = process.env.NEXT_PUBLIC_S3_REGION ?? 'eu-west-2'
-) {
-  if (!key) return null;
-  const safeKey = key.replace(/ /g, '+');
-  if (downloadBase) return `${downloadBase}/${safeKey}`;
-  if (bucket) return `https://${bucket}.s3.${region}.amazonaws.com/${safeKey}`;
-  return null;
-}
 
 function trackStatus(jobStatus: JobStatus, track: Track) {
   if (jobStatus === JobStatus.FAILED) return 'Failed';
@@ -104,9 +91,10 @@ export default function JobPage() {
       setJobState(payload);
       setError(null);
       setIsLoading(false);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setError(err?.message || 'Failed to load job');
+      const message = err instanceof Error ? err.message : 'Failed to load job';
+      setError(message);
       setIsLoading(false);
     }
   }, [jobId]);
@@ -129,7 +117,7 @@ export default function JobPage() {
     }, pollIntervalMs);
 
     return () => clearInterval(timer);
-  }, [fetchStatus, jobState?.job.status]);
+  }, [fetchStatus, jobState?.job.status, jobId]);
 
   const allDone = useMemo(() => {
     if (!jobState) return false;
@@ -156,9 +144,10 @@ export default function JobPage() {
       } else {
         throw new Error('Missing bundle URL');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setError(err?.message || 'Failed to download tracks');
+      const message = err instanceof Error ? err.message : 'Failed to download tracks';
+      setError(message);
     } finally {
       setIsDownloading(false);
     }
@@ -243,8 +232,6 @@ export default function JobPage() {
               <tbody className="divide-y divide-border">
                 {jobState?.tracks.map((track) => {
                   const label = trackStatus(jobState.job.status, track);
-                  const downloadUrl = buildDownloadUrl(jobState.job.output_bucket, track.output_key);
-
                   return (
                     <tr key={track.id} className="hover:bg-muted/30">
                       <td className="px-4 py-3 align-top font-mono text-xs text-muted-foreground">
