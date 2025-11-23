@@ -1,6 +1,6 @@
 'use client';
 
-import { UploadIcon } from 'lucide-react';
+import { CheckCircle2, UploadIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { createContext, useContext } from 'react';
 import type { DropEvent, DropzoneOptions, FileRejection } from 'react-dropzone';
@@ -41,6 +41,8 @@ export type DropzoneProps = Omit<DropzoneOptions, 'onDrop'> & {
     fileRejections: FileRejection[],
     event: DropEvent
   ) => void;
+  /** Optional upload progress (0-100). When provided, a progress bar will be shown. */
+  progress?: number | null;
   children?: ReactNode;
 };
 
@@ -54,6 +56,7 @@ export const Dropzone = ({
   disabled,
   src,
   className,
+  progress,
   children,
   ...props
 }: DropzoneProps) => {
@@ -82,11 +85,11 @@ export const Dropzone = ({
       value={{ src, accept, maxSize, minSize, maxFiles }}
     >
       <Button
-        className={cn(
-          'relative h-auto w-full flex-col overflow-hidden p-8',
-          isDragActive && 'outline-none ring-1 ring-ring',
-          className
-        )}
+      className={cn(
+        'relative h-auto w-full flex-col overflow-hidden p-8',
+        isDragActive && 'outline-none ring-1 ring-ring',
+        className
+      )}
         disabled={disabled}
         type="button"
         variant="outline"
@@ -94,6 +97,24 @@ export const Dropzone = ({
       >
         <input {...getInputProps()} disabled={disabled} />
         {children}
+        {typeof progress === 'number' && (
+          <div className="absolute inset-x-0 bottom-0">
+            <div className="flex items-center gap-2 px-3 pb-3 text-xs text-muted-foreground">
+              {progress >= 100 ? (
+                <CheckCircle2 className="size-4 text-emerald-600" />
+              ) : (
+                <div className="h-2 w-2 animate-pulse rounded-full bg-primary" />
+              )}
+              <span>{progress >= 100 ? 'Upload complete' : 'Uploading…'}</span>
+            </div>
+            <div className="h-1 w-full bg-muted">
+              <div
+                className="h-1 bg-primary transition-all"
+                style={{ width: `${Math.min(Math.max(progress, 0), 100)}%` }}
+              />
+            </div>
+          </div>
+        )}
       </Button>
     </DropzoneContext.Provider>
   );

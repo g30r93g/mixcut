@@ -17,7 +17,7 @@ import { parseCue, validateCue } from '@mixcut/parser';
 import type { CreateJobResponse } from '@mixcut/shared';
 import { AlertTriangle, CheckCircle2, Loader2, Scissors, Upload } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 const apiBase = (
   process.env.NEXT_PUBLIC_GATEWAY_URL ??
@@ -27,20 +27,39 @@ const apiUrl = (path: string) => `${apiBase}${path}`;
 
 type Stage = 'idle' | 'creating' | 'uploading' | 'uploaded' | 'starting';
 
-async function uploadToPresigned(url: string, file: File, fallbackType: string) {
+async function uploadToPresigned(
+  url: string,
+  file: File,
+  fallbackType: string,
+  onProgress?: (percent: number) => void
+) {
   const contentType = file.type || fallbackType;
-  const response = await fetch(url, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': contentType,
-    },
-    body: file,
-  });
 
-  if (!response.ok) {
-    const message = await response.text();
-    throw new Error(message || 'Failed to upload file');
-  }
+  // XMLHttpRequest for progress support
+  await new Promise<void>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('PUT', url);
+    xhr.setRequestHeader('Content-Type', contentType);
+
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable && onProgress) {
+        const percent = Math.round((event.loaded / event.total) * 100);
+        onProgress(percent);
+      }
+    };
+
+    xhr.onerror = () => reject(new Error('Network error uploading file'));
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        if (onProgress) onProgress(100);
+        resolve();
+      } else {
+        reject(new Error(`Upload failed with status ${xhr.status}`));
+      }
+    };
+
+    xhr.send(file);
+  });
 }
 
 export default function UploadPage() {
@@ -51,8 +70,35 @@ export default function UploadPage() {
   const [stage, setStage] = useState<Stage>('idle');
   const [error, setError] = useState<string | null>(null);
   const [cueValid, setCueValid] = useState<boolean | null>(null);
+  const [audioProgress, setAudioProgress] = useState<number | null>(null);
+  const [cueProgress, setCueProgress] = useState<number | null>(null);
 
   const isBusy = stage === 'creating' || stage === 'uploading' || stage === 'starting';
+
+  useEffect(() => {
+    const runValidation = async () => {
+      if (!cueFile) {
+        setCueValid(null);
+        return;
+      }
+
+      try {
+        const cueText = await cueFile.text();
+        const parsed = parseCue(cueText);
+        const validation = validateCue(parsed);
+        if (!validation.ok) {
+          throw new Error(validation.error || 'Invalid CUE sheet');
+        }
+        setCueValid(true);
+        setError(null);
+      } catch (err: any) {
+        setCueValid(false);
+        setError(err?.message || 'Invalid CUE sheet');
+      }
+    };
+
+    void runValidation();
+  }, [cueFile]);
 
   const handleUpload = useCallback(async () => {
     if (!audioFile || !cueFile) {
@@ -60,17 +106,8 @@ export default function UploadPage() {
       return;
     }
 
-    try {
-      const cueText = await cueFile.text();
-      const parsed = parseCue(cueText);
-      const validation = validateCue(parsed);
-      if (!validation.ok) {
-        throw new Error(validation.error || 'Invalid CUE sheet');
-      }
-      setCueValid(true);
-    } catch (err: any) {
-      setCueValid(false);
-      setError(err?.message || 'Invalid CUE sheet');
+    if (cueValid !== true) {
+      setError('Invalid CUE sheet');
       return;
     }
 
@@ -90,16 +127,22 @@ export default function UploadPage() {
       const payload = (await response.json()) as CreateJobResponse;
       setJobId(payload.jobId);
       setStage('uploading');
+      setAudioProgress(0);
+      setCueProgress(0);
 
       await Promise.all([
-        uploadToPresigned(payload.uploadUrls.audio, audioFile, 'audio/mp4'),
-        uploadToPresigned(payload.uploadUrls.cue, cueFile, 'text/plain'),
+        uploadToPresigned(payload.uploadUrls.audio, audioFile, 'audio/mp4', setAudioProgress),
+        uploadToPresigned(payload.uploadUrls.cue, cueFile, 'text/plain', setCueProgress),
       ]);
 
       setStage('uploaded');
+      setAudioProgress(100);
+      setCueProgress(100);
     } catch (err: any) {
       console.error(err);
       setError(err?.message || 'Upload failed');
+      setAudioProgress(null);
+      setCueProgress(null);
       setStage('idle');
     }
   }, [audioFile, cueFile]);
@@ -163,6 +206,7 @@ export default function UploadPage() {
             disabled={isBusy}
             maxFiles={1}
             onDrop={(files) => setAudioFile(files[0] ?? null)}
+            progress={audioProgress}
             src={audioFile ? [audioFile] : undefined}
           >
             <DropzoneEmptyState />
@@ -174,6 +218,7 @@ export default function UploadPage() {
             disabled={isBusy}
             maxFiles={1}
             onDrop={(files) => setCueFile(files[0] ?? null)}
+            progress={cueProgress}
             src={cueFile ? [cueFile] : undefined}
           >
             <DropzoneEmptyState />
