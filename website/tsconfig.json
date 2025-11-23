@@ -19,7 +19,11 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@mixcut/shared": ["../shared/src"],
+      "@mixcut/shared/*": ["../shared/src/*"],
+      "@mixcut/parser": ["../parser/src"],
+      "@mixcut/parser/*": ["../parser/src/*"]
     }
   },
   "include": [
