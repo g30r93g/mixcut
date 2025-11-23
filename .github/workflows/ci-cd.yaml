@@ -21,6 +21,17 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Cache Docker layers
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -42,6 +53,10 @@ jobs:
       - name: Build website
         working-directory: website
         run: pnpm build
+
+      - name: Build worker Docker image (lint/pack check)
+        working-directory: services/worker
+        run: docker build . -t mixcut-worker-ci --platform=linux/amd64
 
   deploy:
     runs-on: ubuntu-latest
