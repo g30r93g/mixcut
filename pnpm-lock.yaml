@@ -73,15 +73,15 @@ importers:
       '@aws-sdk/s3-request-presigner':
         specifier: ^3.600.0
         version: 3.932.0
+      '@mixcut/shared':
+        specifier: workspace:*
+        version: link:../../shared
       '@supabase/supabase-js':
         specifier: ^2.45.0
         version: 2.81.1
       jszip:
         specifier: ^3.10.1
         version: 3.10.1
-      shared:
-        specifier: '*'
-        version: 0.2.0
     devDependencies:
       '@types/aws-lambda':
         specifier: ^8.10.138
@@ -101,15 +101,15 @@ importers:
       '@aws-sdk/client-sqs':
         specifier: ^3.600.0
         version: 3.932.0
+      '@mixcut/parser':
+        specifier: workspace:*
+        version: link:../../parser
+      '@mixcut/shared':
+        specifier: workspace:*
+        version: link:../../shared
       '@supabase/supabase-js':
         specifier: ^2.45.0
         version: 2.81.1
-      parser:
-        specifier: '*'
-        version: 0.1.4
-      shared:
-        specifier: '*'
-        version: 0.2.0
     devDependencies:
       '@types/node':
         specifier: ^22.0.0
@@ -1888,9 +1888,6 @@ packages:
     resolution: {integrity: sha512-gYjt7OIqdM0PcttNYP2aVrr2G0bMALkBaoehD4BuRGjAOtipg0b6wHg1yNL+s5zSnLZZrGHOw4IrND8CD+3oIQ==}
     hasBin: true
 
-  bintrees@0.0.10:
-    resolution: {integrity: sha512-BkR37mfNUjTN36dENR1V6BlW8rqzpJnqCBhe2ZtWXJ1UgTVPHIlWSfYX7Ap/FlAgl7XWRr3mG4eR2LFnezBG1g==}
-
   bowser@2.12.1:
     resolution: {integrity: sha512-z4rE2Gxh7tvshQ4hluIT7XcFrgLIQaw9X3A+kTTRdovCz5PMukm/0QC/BKSYPj3omF5Qfypn9O/c5kgpmvYUCw==}
 
@@ -1915,16 +1912,6 @@ packages:
 
   bser@2.1.1:
     resolution: {integrity: sha512-gQxTNE/GAfIIrmHLUE3oJyp5FO6HRBfhjnw4/wMmA63ZGDJnWBmgY/lyQBpnDUkGmAhbSe39tx2d/iTOAfglwQ==}
-
-  bson@0.1.8:
-    resolution: {integrity: sha512-Zen/6PF3Mox895jY2kVBC8m/zbApUgUoGwQ7p+UqdcByls5aYNgE4CrpXgycsPcMio+wto6nRvhJlJuZr5hxBw==}
-    engines: {node: '>=0.6.19'}
-    deprecated: Fixed a critical issue with BSON serialization documented in CVE-2019-2391, see https://bit.ly/2KcpXdo for more details
-
-  bson@0.1.9:
-    resolution: {integrity: sha512-HlvXnohuuxlb/AzILVZFgGBO7658NPddPn1Q8PRC6ANHoPZKJotU0WG9+PoMjO7ZFM/e+jKbqOstXJLyIhSOgA==}
-    engines: {node: '>=0.6.19'}
-    deprecated: Fixed a critical issue with BSON serialization documented in CVE-2019-2391, see https://bit.ly/2KcpXdo for more details
 
   buffer-from@1.1.2:
     resolution: {integrity: sha512-E+XQCRwSbaaiChtv6k6Dwgc+bx+Bs6vuKJHHl5kox/BaKbhiXzqQOwK4cO22yElGp2OCmjwVhT3HmxgyPGnJfQ==}
@@ -2100,9 +2087,6 @@ packages:
   diff@4.0.2:
     resolution: {integrity: sha512-58lmxKSA4BNyLz+HHMUzlOEpg09FV+ev6ZMe3vJihgdxzgcwZ8VoEEPmALCZG9LmqfVoNMMKpttIYTVG6uDY7A==}
     engines: {node: '>=0.3.1'}
-
-  disect@1.1.1:
-    resolution: {integrity: sha512-rr2Ym8FSAoqAJ1KfpUiQ/Io01HP0LZPHBuppbFsHozmSNf+YwrvyD5pm5tMTUApJFNwD7HeWJ5DGldSugScukA==}
 
   doctrine@2.1.0:
     resolution: {integrity: sha512-35mSku4ZXK0vfCuHEDAwt55dg2jNajHZ1odvF+8SSr82EsZY4QmXfuWso8oEd8zRhVObSN18aM0CjSdoBX7zIw==}
@@ -3055,11 +3039,6 @@ packages:
   minimist@1.2.8:
     resolution: {integrity: sha512-2yyAR8qBkN3YuheJanUpWC5U3bb5osDywNB8RzDVlDwDHbocAJveqqj1u8+SVD7jkWT4yvsHCpWqqWqAxb0zCA==}
 
-  mongodb@1.2.14:
-    resolution: {integrity: sha512-6e+wAdsDC8LXAiDd8hyvs3PelKsJC/zIuNehU3FeI4JidhoYW2CG3jGTshg9MI8UKPrcyB8sqY0blpRFPYPLSg==}
-    engines: {node: '>=0.6.19'}
-    deprecated: Please upgrade to 2.2.19 or higher
-
   ms@2.1.3:
     resolution: {integrity: sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==}
 
@@ -3111,10 +3090,6 @@ packages:
 
   node-releases@2.0.27:
     resolution: {integrity: sha512-nmh3lCkYZ3grZvqcCH+fjmQ7X+H0OeZgP40OierEaAptX4XofMh5kwNbWh7lBduUzCcV/8kZ+NDLCwm2iorIlA==}
-
-  node-uuid@1.3.3:
-    resolution: {integrity: sha512-xKQtL5imfvX6PvUmgJyU/XaNT/l8tKvs+sJ6KLOmIzk/H8+sm7uE80QlPmmu3l1uirvRL3kZqtJPWoQBWT9gQw==}
-    deprecated: Use uuid module instead
 
   normalize-path@3.0.0:
     resolution: {integrity: sha512-6eZs5Ls3WtCisHWp9S2GUy8dqkpGi4BVSz3GaqiE6ezub0512ESztXUwUB6C6IKbQkY2Pnb/mD4WYojCRwcwLA==}
@@ -3201,10 +3176,6 @@ packages:
   parse-json@5.2.0:
     resolution: {integrity: sha512-ayCKvm/phCGxOkYRSCM82iDwct8/EonSEgCSxWxD7ve6jHggsFl4fZVQBPRNgQoKiuV/odhFrGzQXZwbifC8Rg==}
     engines: {node: '>=8'}
-
-  parser@0.1.4:
-    resolution: {integrity: sha512-f6EM/mBtPzmIh96MpcbePfhkBOYRmLYWuOukJqMysMlvjp4s2MQSSQnFEekd9GV4JGTnDJ2uFt3Ztcqc9wCMJg==}
-    engines: {node: 0.4-0.9}
 
   path-exists@4.0.0:
     resolution: {integrity: sha512-ak9Qy5Q7jYb2Wwcey5Fpvg2KoAc/ZIhLSLOSBmRmygPsGwkVVt0fZa0qrtMz+m6tJTAHfZQ8FnmB4MG4LWy7/w==}
@@ -3393,11 +3364,6 @@ packages:
   setimmediate@1.0.5:
     resolution: {integrity: sha512-MATJdZp8sLqDl/68LfQmbP8zKPLQNV6BIZoIgrscFDQ+RsvK/BxeDQOgyxKKoh0y/8h3BqVFnCqQ/gd+reiIXA==}
 
-  shared@0.2.0:
-    resolution: {integrity: sha512-nRBVf7KHFkU4vmiKAhTaJUm8miFMcU6b5I98U71Kk6uu1RIBeRwWivnMXEQOQxTxObPhOSIQSBhuIT+O/urG3A==}
-    bundledDependencies:
-      - rsvp
-
   sharp@0.34.5:
     resolution: {integrity: sha512-Ou9I5Ft9WNcCbXrU9cMgPBcCK8LiwLqcbywW3t4oDV37n1pzpuNLsYiAV8eODnjbtQlSDwZ2cUEeQz4E54Hltg==}
     engines: {node: ^18.17.0 || ^20.3.0 || >=21.0.0}
@@ -3568,10 +3534,6 @@ packages:
     resolution: {integrity: sha512-65P7iz6X5yEr1cwcgvQxbbIw7Uk3gOy5dIdtZ4rDveLqhrdJP+Li/Hx6tyK0NEb+2GCyneCMJiGqrADCSNk8sQ==}
     engines: {node: '>=8.0'}
 
-  tokenizer@1.1.2:
-    resolution: {integrity: sha512-c/EYsBwEW/EX28q44UaSrJ9o5M2aI+N/xdJJ4Zl7dNq76OmWQHhmXH0T8DJQNjVYPc7NclV2CZQfyeUMfnEu/A==}
-    engines: {node: 0.10.x}
-
   ts-api-utils@2.1.0:
     resolution: {integrity: sha512-CUgTZL1irw8u29bzrOD/nH85jqyc74D6SshFgujOIA7osm2Rz7dYH77agkx7H4FBNxDq7Cjf+IjaX/8zwFW+ZQ==}
     engines: {node: '>=18.12'}
@@ -3680,9 +3642,6 @@ packages:
   unbox-primitive@1.1.0:
     resolution: {integrity: sha512-nWJ91DjeOkej/TA8pXQ3myruKpKEYgqvpw9lz4OPHj/NWFNluYrjbz9j01CJ8yKQd2g4jFoOkINCTW2I5LEEyw==}
     engines: {node: '>= 0.4'}
-
-  underscore@1.4.4:
-    resolution: {integrity: sha512-ZqGrAgaqqZM7LGRzNjLnw5elevWb5M8LEoDMadxIW3OWbcv72wMMgKdwOKpd5Fqxe8choLD8HN3iSj3TUh/giQ==}
 
   undici-types@6.19.8:
     resolution: {integrity: sha512-ve2KP6f/JnbPBFyobGHuerC9g1FYGn/F8n1LWTwNxCEzd6IfqTwUQcNXgEtmmQ6DlRrC1hrSrBnCZPokRrDHjw==}
@@ -6036,8 +5995,6 @@ snapshots:
 
   baseline-browser-mapping@2.8.28: {}
 
-  bintrees@0.0.10: {}
-
   bowser@2.12.1: {}
 
   brace-expansion@1.1.12:
@@ -6068,10 +6025,6 @@ snapshots:
   bser@2.1.1:
     dependencies:
       node-int64: 0.4.0
-
-  bson@0.1.8: {}
-
-  bson@0.1.9: {}
 
   buffer-from@1.1.2: {}
 
@@ -6223,8 +6176,6 @@ snapshots:
   diff-sequences@29.6.3: {}
 
   diff@4.0.2: {}
-
-  disect@1.1.1: {}
 
   doctrine@2.1.0:
     dependencies:
@@ -7515,10 +7466,6 @@ snapshots:
 
   minimist@1.2.8: {}
 
-  mongodb@1.2.14:
-    dependencies:
-      bson: 0.1.8
-
   ms@2.1.3: {}
 
   nanoid@3.3.11: {}
@@ -7560,8 +7507,6 @@ snapshots:
   node-int64@0.4.0: {}
 
   node-releases@2.0.27: {}
-
-  node-uuid@1.3.3: {}
 
   normalize-path@3.0.0: {}
 
@@ -7664,10 +7609,6 @@ snapshots:
       error-ex: 1.3.4
       json-parse-even-better-errors: 2.3.1
       lines-and-columns: 1.2.4
-
-  parser@0.1.4:
-    dependencies:
-      tokenizer: 1.1.2
 
   path-exists@4.0.0: {}
 
@@ -7860,14 +7801,6 @@ snapshots:
       es-object-atoms: 1.1.1
 
   setimmediate@1.0.5: {}
-
-  shared@0.2.0:
-    dependencies:
-      bintrees: 0.0.10
-      bson: 0.1.9
-      mongodb: 1.2.14
-      node-uuid: 1.3.3
-      underscore: 1.4.4
 
   sharp@0.34.5:
     dependencies:
@@ -8082,10 +8015,6 @@ snapshots:
     dependencies:
       is-number: 7.0.0
 
-  tokenizer@1.1.2:
-    dependencies:
-      disect: 1.1.1
-
   ts-api-utils@2.1.0(typescript@5.6.3):
     dependencies:
       typescript: 5.6.3
@@ -8205,8 +8134,6 @@ snapshots:
       has-bigints: 1.1.0
       has-symbols: 1.1.0
       which-boxed-primitive: 1.1.1
-
-  underscore@1.4.4: {}
 
   undici-types@6.19.8: {}
 

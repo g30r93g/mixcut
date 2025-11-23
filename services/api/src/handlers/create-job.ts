@@ -2,7 +2,7 @@ import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import type { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
 import { randomUUID } from "node:crypto";
-import type { CreateJobResponse } from "shared";
+import type { CreateJobResponse } from "@mixcut/shared";
 import { internalError, json } from "../lib/http";
 import { supabase } from "../lib/supabase";
 

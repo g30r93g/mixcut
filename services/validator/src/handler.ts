@@ -1,6 +1,6 @@
 import { GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { SQSClient, SendMessageCommand } from "@aws-sdk/client-sqs";
-import { parseCue, validateCue } from "parser"; // your shared parser library
+import { parseCue, validateCue } from "@mixcut/parser";
 import { supabase } from "./lib/supabase";
 import { ValidatorEvent } from "./lib/types";
 

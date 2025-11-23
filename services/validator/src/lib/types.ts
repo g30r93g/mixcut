@@ -1,11 +1,6 @@
-export interface JobRecord {
-  id: string;
-  status: string;
-  audio_key: string;
-  audio_bucket: string;
-  cue_key: string;
-  cue_bucket: string;
-}
+import type { Job } from "@mixcut/shared";
+
+export type JobRecord = Job;
 
 export interface ValidatorEvent {
   jobId: string;

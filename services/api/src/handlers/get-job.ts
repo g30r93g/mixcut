@@ -1,5 +1,5 @@
 import type { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
-import type { Job, Track } from "shared";
+import type { Job, Track } from "@mixcut/shared";
 import { badRequest, internalError, json, notFound } from "../lib/http";
 import { supabase } from "../lib/supabase";
 

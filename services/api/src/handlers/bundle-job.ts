@@ -7,7 +7,7 @@ import {
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import type { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
 import JSZip from "jszip";
-import { JobStatus } from "shared";
+import { JobStatus } from "@mixcut/shared";
 import { badRequest, internalError, json, notFound } from "../lib/http";
 import { supabase } from "../lib/supabase";
 
