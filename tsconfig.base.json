@@ -19,9 +19,11 @@
     /* Path mapping for workspace packages */
     "baseUrl": ".",
     "paths": {
-      "parser/*": ["parser/src/*"]
+      "@mixcut/shared": ["shared/src"],
+      "@mixcut/shared/*": ["shared/src/*"],
+      "@mixcut/parser": ["parser/src"],
+      "@mixcut/parser/*": ["parser/src/*"]
     },
-
     "outDir": "dist"
   },
 
