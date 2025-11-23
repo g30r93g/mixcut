@@ -46,12 +46,12 @@ jobs:
         working-directory: services/validator
         run: pnpm build
 
-      - name: Build worker package
-        working-directory: services/worker
-        run: pnpm build
-
       - name: Build website
         working-directory: website
+        run: pnpm build
+
+      - name: Build worker package
+        working-directory: services/worker
         run: pnpm build
 
       - name: Build worker Docker image (lint/pack check)
@@ -100,8 +100,27 @@ jobs:
         working-directory: infra/aws
         run: pnpm cdk deploy MixcutStorageStack MixcutWorkerStack MixcutApiStack --require-approval never
 
+  deploy_website:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node & pnpm
+        uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
       - name: Deploy website to Vercel
-        run: npx vercel@latest deploy --prod --cwd website --token ${{ secrets.VERCEL_TOKEN }} --yes
+        run: pnpm dlx vercel@latest deploy --prod --cwd website --token ${{ secrets.VERCEL_TOKEN }} --yes
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
