@@ -44,8 +44,8 @@ COPY package.json tsconfig.json ./
 COPY src ./src
 
 # Install deps, build, then prune to prod-only.
+# Flatten dist into /tmp/build so index.js sits at project root
 RUN corepack enable && pnpm install --no-frozen-lockfile && pnpm run build && pnpm prune --prod && \
-    # Flatten dist into /tmp/build so index.js sits at project root
     cp -r dist/. . && rm -rf dist
 
 # Move built artifacts into Lambda task root
