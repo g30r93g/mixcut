@@ -43,7 +43,15 @@ jobs:
         working-directory: services/worker
         run: pnpm build
 
-      - name: Build worker Docker image (lint/pack check)
+      - name: Cache Docker layers
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-worker-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-worker-buildx-
+
+      - name: Build worker Docker image
         working-directory: services/worker
         env:
           DOCKER_BUILDKIT: 1
@@ -51,11 +59,14 @@ jobs:
           docker buildx create --use --name builder || docker buildx use builder
           docker buildx build \
             --platform=linux/amd64 \
-            --cache-from=type=gha,scope=worker \
-            --cache-to=type=gha,scope=worker,mode=max \
+            --cache-from=type=local,src=/tmp/.buildx-cache \
+            --cache-to=type=local,dest=/tmp/.buildx-cache-new,mode=max \
             --load \
             -t mixcut-worker-ci \
             .
+          # Persist the updated cache for the next run.
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
   deploy:
     runs-on: ubuntu-latest
