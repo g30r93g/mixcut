@@ -9,3 +9,4 @@ onlyBuiltDependencies:
   - bson
   - sharp
   - unrs-resolver
+  - esbuild
