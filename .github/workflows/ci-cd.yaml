@@ -39,6 +39,14 @@ jobs:
         working-directory: services/validator
         run: pnpm build
 
+      - name: Restore Next.js cache
+        uses: actions/cache@v4
+        with:
+          path: website/.next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-
+
       - name: Build website
         working-directory: website
         run: pnpm build
