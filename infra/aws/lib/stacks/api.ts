@@ -73,7 +73,7 @@ export class ApiStack extends cdk.Stack {
         stageName: "prod"
       },
       defaultCorsPreflightOptions: {
-        allowOrigins: ["http://localhost:3000"],
+        allowOrigins: ["http://localhost:3000", "https://mixcut-jet.vercel.app"],
         allowMethods: ["OPTIONS", "GET", "POST"],
         allowHeaders: ["Content-Type"],
         statusCode: 200

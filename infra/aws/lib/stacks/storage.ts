@@ -25,7 +25,7 @@ export class StorageStack extends cdk.Stack {
       cors: [
         {
           allowedMethods: [HttpMethods.PUT, HttpMethods.GET],
-          allowedOrigins: ["http://localhost:3000"],
+          allowedOrigins: ["http://localhost:3000", "https://mixcut-jet.vercel.app"],
           allowedHeaders: ["*"],
           exposedHeaders: ["ETag"]
         }
@@ -46,7 +46,7 @@ export class StorageStack extends cdk.Stack {
       cors: [
         {
           allowedMethods: [HttpMethods.GET],
-          allowedOrigins: ["http://localhost:3000"],
+          allowedOrigins: ["http://localhost:3000", "https://mixcut-jet.vercel.app"],
           allowedHeaders: ["*"],
           exposedHeaders: ["ETag"]
         }
