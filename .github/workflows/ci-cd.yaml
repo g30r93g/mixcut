@@ -44,6 +44,7 @@ jobs:
         run: pnpm build
 
       - name: Cache Docker layers
+        id: worker-buildx-cache
         uses: actions/cache@v4
         with:
           path: /tmp/.buildx-cache
@@ -55,18 +56,27 @@ jobs:
         working-directory: services/worker
         env:
           DOCKER_BUILDKIT: 1
+          CACHE_HIT: ${{ steps.worker-buildx-cache.outputs.cache-hit }}
         run: |
           docker buildx create --use --name builder || docker buildx use builder
+          cache_to_args=""
+          post_cache_update=false
+          if [ "$CACHE_HIT" != "true" ]; then
+            cache_to_args="--cache-to=type=local,dest=/tmp/.buildx-cache-new,mode=max"
+            post_cache_update=true
+          fi
           docker buildx build \
             --platform=linux/amd64 \
             --cache-from=type=local,src=/tmp/.buildx-cache \
-            --cache-to=type=local,dest=/tmp/.buildx-cache-new,mode=max \
+            ${cache_to_args} \
             --load \
             -t mixcut-worker-ci \
             .
-          # Persist the updated cache for the next run.
-          rm -rf /tmp/.buildx-cache
-          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+          if [ "$post_cache_update" = true ]; then
+            # Persist the updated cache for the next run only when no cache hit.
+            rm -rf /tmp/.buildx-cache
+            mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+          fi
 
   deploy:
     runs-on: ubuntu-latest
