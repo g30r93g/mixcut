@@ -2,7 +2,6 @@
   "name": "mixcut",
   "version": "0.1.0",
   "private": true,
-  "packageManager": "pnpm@10.18.2",
   "scripts": {
     "build": "pnpm run -r build",
     "lint": "pnpm run -r lint",
@@ -15,10 +14,12 @@
     "worker:bundle": "pnpm -F worker build",
     "validator:bundle": "pnpm -F validator build",
 
+    "website:build": "pnpm -F website build",
     "website:dev": "pnpm -F website dev"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "typescript": "^5.6.3"
-  }
+  },
+  "packageManager": "pnpm@10.18.2"
 }

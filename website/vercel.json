@@ -1,4 +1,4 @@
 {
-  "installCommand": "cd .. && pnpm install --frozen-lockfile && cd website",
-  "buildCommand": "pnpm build"
+    "installCommand": "pnpm install --frozen-lockfile",
+    "buildCommand": "pnpm build"
 }
