@@ -122,7 +122,7 @@ jobs:
         run: pnpm cdk deploy MixcutStorageStack MixcutWorkerStack MixcutApiStack --require-approval never
 
       - name: Deploy website to Vercel
-        run: pnpm dlx vercel@latest deploy --prod --cwd website --token ${{ secrets.VERCEL_TOKEN }} --yes
+        run: pnpm dlx vercel@latest deploy --prod --token ${{ secrets.VERCEL_TOKEN }} --yes
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
