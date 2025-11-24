@@ -26,7 +26,7 @@ const apiBase = (
 ).replace(/\/$/, '');
 const apiUrl = (path: string) => `${apiBase}${path}`;
 
-const pollIntervalMs = 4000;
+const pollIntervalMs = 1000;
 
 const statusCopy: Record<JobStatus, string> = {
   [JobStatus.PENDING_UPLOAD]: 'Waiting for upload',
