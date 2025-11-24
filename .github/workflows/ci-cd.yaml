@@ -134,10 +134,26 @@ jobs:
         working-directory: infra/aws
         env:
           STAGE: ${{ env.DEPLOY_STAGE }}
-        run: pnpm cdk deploy MixcutStorageStack MixcutWorkerStack MixcutApiStack --require-approval never -c stage=${{ env.DEPLOY_STAGE }}
+        run: pnpm cdk deploy MixcutStorageStack MixcutWorkerStack MixcutApiStack --require-approval never -c stage=${{ env.DEPLOY_STAGE }} --outputs-file ../../cdk-outputs.json
+
+      - name: Export API Gateway URL from CDK outputs
+        run: |
+          NEXT_PUBLIC_GATEWAY_URL=$(jq -r '.MixcutApiStack.ApiUrl' cdk-outputs.json)
+          if [ -z "$NEXT_PUBLIC_GATEWAY_URL" ] || [ "$NEXT_PUBLIC_GATEWAY_URL" = "null" ]; then
+            echo "Failed to read ApiUrl from CDK outputs" >&2
+            exit 1
+          fi
+          echo "NEXT_PUBLIC_GATEWAY_URL=$NEXT_PUBLIC_GATEWAY_URL" >> $GITHUB_ENV
 
       - name: Deploy website to Vercel
-        run: pnpm dlx vercel@latest deploy --prod --regions lhr1 --token ${{ secrets.VERCEL_TOKEN }} --yes
+        run: |
+          pnpm dlx vercel@latest deploy \
+            --prod \
+            --regions lhr1 \
+            --token ${{ secrets.VERCEL_TOKEN }} \
+            --yes \
+            --env NEXT_PUBLIC_GATEWAY_URL=${NEXT_PUBLIC_GATEWAY_URL} \
+            --build-env NEXT_PUBLIC_GATEWAY_URL=${NEXT_PUBLIC_GATEWAY_URL}
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
