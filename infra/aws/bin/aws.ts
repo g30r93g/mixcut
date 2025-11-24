@@ -4,9 +4,15 @@ import { ApiStack } from "../lib/stacks/api";
 import { StorageStack } from "../lib/stacks/storage";
 import { WorkerStack } from "../lib/stacks/worker";
 
-const config = getConfig();
-
 const app = new cdk.App();
+
+const stage =
+  app.node.tryGetContext("stage") ||
+  process.env.STAGE ||
+  process.env.NODE_ENV ||
+  "prod";
+
+const config = getConfig(stage);
 
 const env: cdk.Environment = {
   account: process.env.CDK_DEFAULT_ACCOUNT,

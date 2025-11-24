@@ -83,6 +83,7 @@ jobs:
     needs: build
     env:
       AWS_REGION: eu-west-2
+      DEPLOY_STAGE: prod
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -110,16 +111,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Write .env for CDK
-        run: |
-          cat <<'EOF' > .env
-          SUPABASE_URL=${SUPABASE_URL}
-          SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
-          EOF
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -129,7 +120,9 @@ jobs:
 
       - name: Deploy CDK stacks
         working-directory: infra/aws
-        run: pnpm cdk deploy MixcutStorageStack MixcutWorkerStack MixcutApiStack --require-approval never
+        env:
+          STAGE: ${{ env.DEPLOY_STAGE }}
+        run: pnpm cdk deploy MixcutStorageStack MixcutWorkerStack MixcutApiStack --require-approval never -c stage=${{ env.DEPLOY_STAGE }}
 
       - name: Deploy website to Vercel
         run: pnpm dlx vercel@latest deploy --prod --token ${{ secrets.VERCEL_TOKEN }} --yes

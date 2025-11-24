@@ -8,7 +8,9 @@ import {
 import { SqsEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
 import { LogGroup, RetentionDays } from "aws-cdk-lib/aws-logs";
+import { Secret } from "aws-cdk-lib/aws-secretsmanager";
 import { Queue } from "aws-cdk-lib/aws-sqs";
+import { StringParameter } from "aws-cdk-lib/aws-ssm";
 import { Construct } from "constructs";
 import { join } from "path";
 import { WorkerStackProps } from "../types";
@@ -19,6 +21,18 @@ export class WorkerStack extends cdk.Stack {
 
   constructor(scope: Construct, id: string, props: WorkerStackProps) {
     super(scope, id, props);
+
+    const supabaseUrl = StringParameter.fromStringParameterName(
+      this,
+      "SupabaseUrlParam",
+      props.config.supabaseUrlParameterName
+    ).stringValue;
+
+    const supabaseServiceRoleKeySecret = Secret.fromSecretNameV2(
+      this,
+      "SupabaseServiceRoleKeySecret",
+      props.config.supabaseServiceRoleKeySecretName
+    );
 
     const dlq = new Queue(this, "JobsDlq", {
       retentionPeriod: cdk.Duration.days(7)
@@ -58,10 +72,13 @@ export class WorkerStack extends cdk.Stack {
         UPLOADS_BUCKET: props.uploadsBucket.bucketName,
         JOBS_QUEUE_URL: this.queue.queueUrl,
         // Supabase envs will be injected at deploy-time
-        SUPABASE_URL: props.config.SUPABASE_URL,
-        SUPABASE_SERVICE_ROLE_KEY: props.config.SUPABASE_SERVICE_ROLE_KEY
+        SUPABASE_URL: supabaseUrl,
+        // CDK disallows raw SecretValue in env; unsafeUnwrap embeds the value at synth-time.
+        SUPABASE_SERVICE_ROLE_KEY: supabaseServiceRoleKeySecret.secretValue.unsafeUnwrap()
       },
     });
+
+    supabaseServiceRoleKeySecret.grantRead(this.validatorFunction);
 
     props.uploadsBucket.grantRead(this.validatorFunction);
     this.queue.grantSendMessages(this.validatorFunction);
@@ -85,10 +102,12 @@ export class WorkerStack extends cdk.Stack {
       environment: {
         UPLOADS_BUCKET: props.uploadsBucket.bucketName,
         OUTPUTS_BUCKET: props.outputsBucket.bucketName,
-        SUPABASE_URL: props.config.SUPABASE_URL,
-        SUPABASE_SERVICE_ROLE_KEY: props.config.SUPABASE_SERVICE_ROLE_KEY
+        SUPABASE_URL: supabaseUrl,
+        SUPABASE_SERVICE_ROLE_KEY: supabaseServiceRoleKeySecret.secretValue.unsafeUnwrap()
       }
     });
+
+    supabaseServiceRoleKeySecret.grantRead(workerFn);
 
     workerFn.addEventSource(
       new SqsEventSource(this.queue, {
