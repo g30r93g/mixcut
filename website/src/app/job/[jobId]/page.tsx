@@ -56,16 +56,16 @@ function trackStatus(jobStatus: JobStatus, track: Track) {
 function statusClass(label: string) {
   switch (label) {
     case 'Completed':
-      return 'text-emerald-600 bg-emerald-100';
+      return 'text-emerald-600 bg-emerald-100 dark:text-emerald-300 dark:bg-emerald-900/50';
     case 'Failed':
-      return 'text-red-600 bg-red-100';
+      return 'text-red-600 bg-red-100 dark:text-red-300 dark:bg-red-900/50';
     case 'Validating':
     case 'Processing':
-      return 'text-blue-600 bg-blue-100';
+      return 'text-blue-600 bg-blue-100 dark:text-blue-300 dark:bg-blue-900/50';
     case 'Queued':
-      return 'text-amber-600 bg-amber-100';
+      return 'text-amber-600 bg-amber-100 dark:text-amber-300 dark:bg-amber-900/50';
     default:
-      return 'text-muted-foreground bg-accent/50';
+      return 'text-muted-foreground bg-accent/50 dark:text-slate-200 dark:bg-slate-800/70';
   }
 }
 
