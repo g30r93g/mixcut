@@ -13,19 +13,21 @@ import {
   DropzoneContent,
   DropzoneEmptyState,
 } from '@/components/ui/shadcn-io/dropzone';
+import { Stage } from '@/types/jobs';
 import { parseCue, validateCue } from '@mixcut/parser';
 import type { CreateJobResponse } from '@mixcut/shared';
 import { AlertTriangle, CheckCircle2, Loader2, Scissors, Upload } from 'lucide-react';
+import { retryWithBackoff } from '@/lib/retry-utils';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-const apiBase = (
-  process.env.NEXT_PUBLIC_GATEWAY_URL ??
-  'https://nti1l1oe3f.execute-api.eu-west-2.amazonaws.com/prod'
-).replace(/\/$/, '');
-const apiUrl = (path: string) => `${apiBase}${path}`;
+const gatewayEnv = process.env.NEXT_PUBLIC_GATEWAY_URL;
+if (!gatewayEnv) {
+  throw new Error('NEXT_PUBLIC_GATEWAY_URL is required');
+}
 
-type Stage = 'idle' | 'creating' | 'uploading' | 'uploaded' | 'starting';
+const apiBase = gatewayEnv.replace(/\/$/, '');
+const apiUrl = (path: string) => `${apiBase}${path}`;
 
 async function uploadToPresigned(
   url: string,
@@ -35,31 +37,34 @@ async function uploadToPresigned(
 ) {
   const contentType = file.type || fallbackType;
 
-  // XMLHttpRequest for progress support
-  await new Promise<void>((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open('PUT', url);
-    xhr.setRequestHeader('Content-Type', contentType);
+  const attemptUpload = () =>
+    new Promise<void>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('PUT', url);
+      xhr.setRequestHeader('Content-Type', contentType);
 
-    xhr.upload.onprogress = (event) => {
-      if (event.lengthComputable && onProgress) {
-        const percent = Math.round((event.loaded / event.total) * 100);
-        onProgress(percent);
-      }
-    };
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable && onProgress) {
+          const percent = Math.round((event.loaded / event.total) * 100);
+          onProgress(percent);
+        }
+      };
 
-    xhr.onerror = () => reject(new Error('Network error uploading file'));
-    xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        if (onProgress) onProgress(100);
-        resolve();
-      } else {
-        reject(new Error(`Upload failed with status ${xhr.status}`));
-      }
-    };
+      xhr.onerror = () => reject(new Error('Network error uploading file'));
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          if (onProgress) onProgress(100);
+          resolve();
+        } else {
+          reject(new Error(`Upload failed with status ${xhr.status}`));
+        }
+      };
 
-    xhr.send(file);
-  });
+      xhr.send(file);
+    });
+
+  // Retry transient network failures with exponential backoff
+  await retryWithBackoff(attemptUpload);
 }
 
 export default function UploadPage() {
@@ -116,9 +121,11 @@ export default function UploadPage() {
     setStage('creating');
 
     try {
-      const response = await fetch(apiUrl('/jobs'), {
-        method: 'POST',
-      });
+      const response = await retryWithBackoff(() =>
+        fetch(apiUrl('/jobs'), {
+          method: 'POST',
+        })
+      );
 
       if (!response.ok) {
         const message = await response.text();
@@ -155,9 +162,11 @@ export default function UploadPage() {
     setStage('starting');
 
     try {
-      const response = await fetch(apiUrl(`/jobs/${jobId}/start`), {
-        method: 'POST',
-      });
+      const response = await retryWithBackoff(() =>
+        fetch(apiUrl(`/jobs/${jobId}/start`), {
+          method: 'POST',
+        })
+      );
 
       if (!response.ok) {
         const message = await response.text();
