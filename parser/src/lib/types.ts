@@ -7,6 +7,10 @@ export interface CueTrack {
 
 export interface ParsedCue {
   fileName?: string;
+  title: string;
+  performer: string;
+  genre: string;
+  releaseYear: string;
   tracks: CueTrack[];
 }
 

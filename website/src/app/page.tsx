@@ -2,16 +2,24 @@
 
 import { ConfirmUpload } from '@/components/confirm-upload';
 import { SelectSource, SourceType } from '@/components/select-source';
-import { TracklistEditor, type CueTrackEntry } from '@/components/tracklist-editor';
+import { TracklistEditor, type CueTrackEntry, type OverallDetails } from '@/components/tracklist-editor';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { retryWithBackoff } from '@/lib/retry-utils';
 import { Stage } from '@/types/jobs';
 import { parseCue, validateCue } from '@mixcut/parser';
 import type { CreateJobResponse } from '@mixcut/shared';
 import { AlertTriangle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 const apiUrl = (path: string) => `/api${path}`;
+
+const emptyOverallDetails: OverallDetails = {
+  title: '',
+  performer: '',
+  genre: '',
+  releaseYear: '',
+};
 
 async function uploadToPresigned(
   url: string,
@@ -60,14 +68,46 @@ export default function UploadPage() {
   const [tracks, setTracks] = useState<CueTrackEntry[]>([]);
   const [currentMs, setCurrentMs] = useState<number>(0);
   const [durationMs, setDurationMs] = useState<number>(0);
+  const [overallDetails, setOverallDetails] = useState<OverallDetails>(emptyOverallDetails);
+  const [artworkFile, setArtworkFile] = useState<File | null>(null);
+  const [artworkProgress, setArtworkProgress] = useState<number | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
   const [stage, setStage] = useState<Stage>('idle');
   const [error, setError] = useState<string | null>(null);
   const [cueValid, setCueValid] = useState<boolean | null>(null);
   const [audioProgress, setAudioProgress] = useState<number | null>(null);
   const [cueProgress, setCueProgress] = useState<number | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const confirmActionRef = useRef<(() => void) | null>(null);
+  const resetCueContent = useCallback(() => {
+    setCueFile(null);
+    setTracks([]);
+    setCueValid(null);
+    setOverallDetails({ ...emptyOverallDetails });
+    setArtworkFile(null);
+    setArtworkProgress(null);
+  }, []);
 
   const isBusy = stage === 'creating' || stage === 'uploading' || stage === 'starting';
+
+  const hasExistingContent = useMemo(() => {
+    const hasOverallFields = Object.values(overallDetails).some((value) =>
+      typeof value === 'string' ? value.trim().length > 0 : false,
+    );
+    return Boolean(cueFile || tracks.length > 0 || audioFile || hasOverallFields || artworkFile);
+  }, [audioFile, artworkFile, cueFile, overallDetails, tracks]);
+
+  const requestChangeConfirmation = useCallback(
+    (action: () => void) => {
+      if (hasExistingContent) {
+        confirmActionRef.current = action;
+        setConfirmOpen(true);
+      } else {
+        action();
+      }
+    },
+    [hasExistingContent],
+  );
 
   useEffect(() => {
     const runValidation = () => {
@@ -77,7 +117,14 @@ export default function UploadPage() {
       }
 
       try {
-        const parsed = { fileName: cueFile?.name, tracks };
+        const parsed = {
+          fileName: cueFile?.name,
+          title: overallDetails.title,
+          performer: overallDetails.performer,
+          genre: overallDetails.genre,
+          releaseYear: overallDetails.releaseYear,
+          tracks,
+        };
         const validation = validateCue(parsed);
         if (!validation.ok) {
           throw new Error(validation.error || 'Invalid CUE sheet');
@@ -92,7 +139,7 @@ export default function UploadPage() {
     };
 
     runValidation();
-  }, [cueFile, tracks]);
+  }, [cueFile, tracks, overallDetails]);
 
   useEffect(() => {
     if (audioFile) {
@@ -110,6 +157,17 @@ export default function UploadPage() {
       setPlayerUrl('');
     }
   }, [sourceType, sourceUrl, audioFile]);
+
+  const updateOverallDetails = useCallback((patch: Partial<OverallDetails>) => {
+    setOverallDetails((prev) => ({ ...prev, ...patch }));
+  }, []);
+
+  const handleArtworkDrop = useCallback((files: File[]) => {
+    const next = files[0];
+    if (!next) return;
+    setArtworkFile(next);
+    setArtworkProgress(null);
+  }, []);
 
   const handleUpload = useCallback(async () => {
     if (sourceType !== 'local') {
@@ -212,22 +270,38 @@ export default function UploadPage() {
 
   const onAction = stage === 'uploaded' ? handleStart : handleUpload;
 
-  const handleCueDrop = useCallback(async (files: File[]) => {
-    const next = files[0];
-    if (!next) return;
+  const handleCueDrop = useCallback(
+    (files: File[]) => {
+      const next = files[0];
+      if (!next) return;
 
-    setCueFile(next);
-    try {
-      const text = await next.text();
-      const parsed = parseCue(text);
-      setTracks(parsed.tracks);
-      setError(null);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to parse CUE file';
-      setError(message);
-      setTracks([]);
-    }
-  }, []);
+      const execute = async () => {
+        resetCueContent();
+        setCueFile(next);
+        try {
+          const text = await next.text();
+          const parsed = parseCue(text);
+          setTracks(parsed.tracks);
+          setOverallDetails({
+            title: parsed.title ?? '',
+            performer: parsed.performer ?? '',
+            genre: parsed.genre ?? '',
+            releaseYear: parsed.releaseYear ?? '',
+          });
+          setError(null);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Failed to parse CUE file';
+          setError(message);
+          setTracks([]);
+        }
+      };
+
+      requestChangeConfirmation(() => {
+        void execute();
+      });
+    },
+    [requestChangeConfirmation, resetCueContent],
+  );
 
   const sortedTracks = useMemo(
     () => [...tracks].sort((a, b) => a.trackNumber - b.trackNumber),
@@ -261,13 +335,13 @@ export default function UploadPage() {
     return `${minutes}:${seconds}`;
   };
 
-  const addTrack = useCallback(() => {
+  const addTrack = useCallback((startMs: number | null) => {
     const nextNumber =
       sortedTracks.length > 0
         ? Math.max(...sortedTracks.map((t) => t.trackNumber)) + 1
         : 1;
     const lastStart = sortedTracks[sortedTracks.length - 1]?.startMs ?? 0;
-    const nextStart = lastStart + 60_000;
+    const nextStart = startMs ?? lastStart + 60_000;
     setTracks((prev) => [
       ...prev,
       {
@@ -302,29 +376,93 @@ export default function UploadPage() {
     return Math.min(100, ((clamped - startMs) / (windowEnd - startMs)) * 100);
   };
 
-  const handleSourceSelect = (type: SourceType) => {
-    setSourceType(type);
-    setError(null);
-    if (type !== 'local') {
-      setAudioFile(null);
-    }
-  };
+  const handleSourceSelect = useCallback(
+    (type: SourceType) => {
+      if (type === sourceType) return;
+      requestChangeConfirmation(() => {
+        resetCueContent();
+        setSourceType(type);
+        setError(null);
+        setAudioFile(null);
+        setSourceUrl('');
+        setPlayerUrl(undefined);
+        setCurrentMs(0);
+        setDurationMs(0);
+      });
+    },
+    [requestChangeConfirmation, resetCueContent, sourceType],
+  );
 
-  const handleLocalAudioDrop = (files: File[]) => {
-    const next = files[0];
-    if (!next) return;
-    setSourceType('local');
-    setAudioFile(next);
-  };
+  const handleLocalAudioDrop = useCallback(
+    (files: File[]) => {
+      const next = files[0];
+      if (!next) return;
+
+      requestChangeConfirmation(() => {
+        resetCueContent();
+        setSourceType('local');
+        setAudioFile(next);
+        setSourceUrl('');
+      });
+    },
+    [requestChangeConfirmation, resetCueContent],
+  );
+
+  const handleSourceUrlChange = useCallback(
+    (value: string) => {
+      if (value === sourceUrl) return;
+      requestChangeConfirmation(() => {
+        resetCueContent();
+        setSourceUrl(value);
+      });
+    },
+    [requestChangeConfirmation, resetCueContent, sourceUrl],
+  );
+
+  const handleConfirmReplace = useCallback(() => {
+    const action = confirmActionRef.current;
+    confirmActionRef.current = null;
+    setConfirmOpen(false);
+    action?.();
+  }, []);
+
+  const handleCancelReplace = useCallback(() => {
+    confirmActionRef.current = null;
+    setConfirmOpen(false);
+  }, []);
 
   return (
     <main className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8">
+      <AlertDialog
+        open={confirmOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            confirmActionRef.current = null;
+          }
+          setConfirmOpen(open);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Replace current source?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Changing the source will clear the uploaded cue sheet, track list, and overall details. This action
+              cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelReplace}>Keep current content</AlertDialogCancel>
+            <AlertDialogAction className="bg-red-600 hover:bg-red-800 font-semibold text-white" onClick={handleConfirmReplace}>Replace</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <SelectSource sourceType={sourceType} isBusy={isBusy} onSelect={handleSourceSelect} />
 
       <TracklistEditor
         sourceType={sourceType}
         sourceUrl={sourceUrl}
-        onSourceUrlChange={setSourceUrl}
+        onSourceUrlChange={handleSourceUrlChange}
         playerUrl={playerUrl}
         isBusy={isBusy}
         audioFile={audioFile}
@@ -344,6 +482,11 @@ export default function UploadPage() {
         onUpdateTrack={updateTrack}
         onRemoveTrack={removeTrack}
         onAddTrack={addTrack}
+        overallDetails={overallDetails}
+        onUpdateOverall={updateOverallDetails}
+        artworkFile={artworkFile}
+        artworkProgress={artworkProgress}
+        onArtworkDrop={handleArtworkDrop}
       />
 
       <ConfirmUpload

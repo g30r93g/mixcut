@@ -1,12 +1,12 @@
 'use client';
 
-import { CheckCircle2, UploadIcon } from 'lucide-react';
-import type { ReactNode } from 'react';
-import { createContext, useContext } from 'react';
-import type { DropEvent, DropzoneOptions, FileRejection } from 'react-dropzone';
-import { useDropzone } from 'react-dropzone';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { CheckCircle2, UploadIcon } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import type { DropEvent, DropzoneOptions, FileRejection } from 'react-dropzone';
+import { useDropzone } from 'react-dropzone';
 
 type DropzoneContextType = {
   src?: File[];
@@ -142,6 +142,24 @@ export const DropzoneContent = ({
   className,
 }: DropzoneContentProps) => {
   const { src } = useDropzoneContext();
+  const imageFile = useMemo(
+    () => src?.find((file) => file.type?.startsWith('image/')),
+    [src],
+  );
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!imageFile) {
+      setPreviewUrl(null);
+      return;
+    }
+
+    const url = URL.createObjectURL(imageFile);
+    setPreviewUrl(url);
+    return () => {
+      URL.revokeObjectURL(url);
+    };
+  }, [imageFile]);
 
   if (!src) {
     return null;
@@ -149,6 +167,26 @@ export const DropzoneContent = ({
 
   if (children) {
     return children;
+  }
+
+  if (previewUrl) {
+    return (
+      <div
+        className={cn(
+          'flex w-full flex-col items-center justify-center gap-3 text-center',
+          className,
+        )}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={previewUrl}
+          alt={imageFile?.name || 'Uploaded image preview'}
+          className="h-32 w-32 rounded-md object-cover shadow-sm"
+        />
+        <p className="w-full truncate font-medium text-sm">{imageFile?.name}</p>
+        <p className="w-full text-xs text-muted-foreground">Drag and drop or click to replace</p>
+      </div>
+    );
   }
 
   return (
