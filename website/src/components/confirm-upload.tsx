@@ -1,10 +1,8 @@
 import { Button } from '@/components/ui/button';
 import {
-  AlertTriangle,
-  CheckCircle2,
+  Loader2,
   Scissors,
   Upload,
-  Loader2,
 } from 'lucide-react';
 import type { SourceType } from './select-source';
 
@@ -21,7 +19,6 @@ type ConfirmUploadProps = {
 export function ConfirmUpload({
   sourceType,
   jobId,
-  cueValid,
   isBusy,
   actionDisabled,
   actionLabel,
@@ -47,17 +44,6 @@ export function ConfirmUpload({
               : 'Uploads will be named source.m4a/source.cue under the job prefix.'}
           </div>
         </div>
-        {cueValid === true ? (
-          <div className="flex items-center gap-2 rounded-md bg-emerald-50 px-3 py-2 text-emerald-700 text-sm">
-            <CheckCircle2 className="size-4" />
-            CUE sheet valid
-          </div>
-        ) : cueValid === false ? (
-          <div className="flex items-center gap-2 rounded-md bg-destructive/10 px-3 py-2 text-destructive text-sm">
-            <AlertTriangle className="size-4" />
-            CUE sheet invalid
-          </div>
-        ) : null}
         <Button disabled={actionDisabled} onClick={onAction} size="lg">
           {isBusy ? (
             <LoaderIcon />
