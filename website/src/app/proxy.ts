@@ -1,15 +1,17 @@
-import { updateSession } from '@/lib/supabase/middleware'
-import type { NextRequest } from 'next/server'
+import { updateSession } from '@/lib/supabase/middleware';
+import { NextResponse, type NextRequest } from 'next/server';
 
 export const config = {
-  matcher: '/about/:path*',
-}
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+};
+
+const requireAuth = process.env.REQUIRE_AUTH ? Boolean(process.env.REQUIRE_AUTH) : true;
 
 // This function can be marked `async` if using `await` inside
-export async function proxy(request: NextRequest) {
-    return await updateSession(request)
+export default async function proxy(request: NextRequest) {
+    if (!requireAuth) {
+      return NextResponse.redirect('/auth/login')
+    }
+
+    return await updateSession(request);
 }
-
-// Alternatively, you can use a default export:
-// export default function proxy(request: NextRequest) { ... }
-

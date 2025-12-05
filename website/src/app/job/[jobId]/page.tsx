@@ -20,11 +20,7 @@ import {
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-const apiBase = (
-  process.env.NEXT_PUBLIC_GATEWAY_URL ??
-  'https://nti1l1oe3f.execute-api.eu-west-2.amazonaws.com/prod'
-).replace(/\/$/, '');
-const apiUrl = (path: string) => `${apiBase}${path}`;
+const apiUrl = (path: string) => `/api${path}`;
 
 const pollIntervalMs = 1000;
 

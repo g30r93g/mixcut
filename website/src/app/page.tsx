@@ -21,13 +21,7 @@ import { retryWithBackoff } from '@/lib/retry-utils';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-const gatewayEnv = process.env.NEXT_PUBLIC_GATEWAY_URL;
-if (!gatewayEnv) {
-  throw new Error('NEXT_PUBLIC_GATEWAY_URL is required');
-}
-
-const apiBase = gatewayEnv.replace(/\/$/, '');
-const apiUrl = (path: string) => `${apiBase}${path}`;
+const apiUrl = (path: string) => `/api${path}`;
 
 async function uploadToPresigned(
   url: string,
