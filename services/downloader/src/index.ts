@@ -1,10 +1,10 @@
+import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
 import { ChildProcessWithoutNullStreams, spawn } from "child_process";
+import { randomUUID } from "crypto";
 import { createReadStream, mkdtempSync, rmSync, statSync } from "fs";
 import { tmpdir } from "os";
-import { join, basename } from "path";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
-import { randomUUID } from "crypto";
+import { basename, join } from "path";
 
 interface DownloadEvent {
   url: string;
@@ -177,6 +177,10 @@ export async function handler(
     const url = parsed.url as string | undefined;
     const keyPrefix = parsed.keyPrefix as string | undefined;
     const fileName = parsed.fileName as string | undefined;
+
+    if (!url) {
+      throw new Error("URL is not provided");
+    }
 
     const result = await performDownload({ url, keyPrefix, fileName });
     return httpResponse(200, result);
