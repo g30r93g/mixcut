@@ -59,6 +59,7 @@ export const TrackWaveform = forwardRef<TrackWaveformHandle, TrackWaveformProps>
         const [isPlaying, setIsPlaying] = useState(false);
         const [minPxPerSec, setMinPxPerSec] = useState(120);
         const minPxPerSecRef = useRef(minPxPerSec);
+        const hasAudio = Boolean(playerUrl);
 
         useImperativeHandle(
             ref,
@@ -91,7 +92,7 @@ export const TrackWaveform = forwardRef<TrackWaveformHandle, TrackWaveformProps>
                 cursorWidth: 2,
                 normalize: true,
                 barWidth: 2,
-                minPxPerSec: minPxPerSec,
+                minPxPerSec: minPxPerSecRef.current,
                 barGap: 1,
                 barRadius: 1,
                 plugins: [
@@ -99,12 +100,7 @@ export const TrackWaveform = forwardRef<TrackWaveformHandle, TrackWaveformProps>
                 ]
             });
 
-            if (hasAudio) {
-                instance.zoom(minPxPerSecRef.current);
-            }
-
             wavesurferRef.current = instance;
-            setIsReady(false);
 
             instance.on('ready', () => {
                 setIsReady(true);
@@ -134,16 +130,24 @@ export const TrackWaveform = forwardRef<TrackWaveformHandle, TrackWaveformProps>
         useEffect(() => {
             const instance = wavesurferRef.current;
             if (!instance) return;
-            if (!playerUrl) {
-                instance.empty();
+
+            const resetStateTimeout = window.setTimeout(() => {
                 setIsReady(false);
                 setIsPlaying(false);
-                return;
+            }, 0);
+
+            if (!playerUrl) {
+                instance.empty();
+                return () => {
+                    window.clearTimeout(resetStateTimeout);
+                };
             }
 
-            setIsReady(false);
-            setIsPlaying(false);
             instance.load(playerUrl);
+
+            return () => {
+                window.clearTimeout(resetStateTimeout);
+            };
         }, [playerUrl]);
 
         useEffect(() => {
@@ -172,13 +176,11 @@ export const TrackWaveform = forwardRef<TrackWaveformHandle, TrackWaveformProps>
             const instance = wavesurferRef.current;
             if (!instance || !hasAudio) return;
             instance.zoom(minPxPerSec);
-        }, [minPxPerSec]);
+        }, [minPxPerSec, hasAudio]);
 
         const handleZoomChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
             setMinPxPerSec(Number(event.target.value));
         }, []);
-
-        const hasAudio = Boolean(playerUrl);
 
         return (
             <Card>

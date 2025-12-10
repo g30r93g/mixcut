@@ -312,37 +312,30 @@ export default function UploadPage() {
 
 function useThrottledValue<T>(value: T, intervalMs: number): T {
   const [throttledValue, setThrottledValue] = useState(value);
-  const lastUpdatedRef = useRef<number>(Date.now());
+  const lastUpdatedRef = useRef<number>(0);
   const timeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
-    const now = Date.now();
-    const elapsed = now - lastUpdatedRef.current;
-
-    if (elapsed >= intervalMs) {
-      lastUpdatedRef.current = now;
-      setThrottledValue(value);
-      return () => {
-        if (timeoutRef.current) {
-          window.clearTimeout(timeoutRef.current);
-          timeoutRef.current = null;
-        }
-      };
-    }
-
-    const remaining = intervalMs - elapsed;
-    timeoutRef.current = window.setTimeout(() => {
-      lastUpdatedRef.current = Date.now();
-      setThrottledValue(value);
-      timeoutRef.current = null;
-    }, remaining);
-
-    return () => {
+    const clearTimeoutRef = () => {
       if (timeoutRef.current) {
         window.clearTimeout(timeoutRef.current);
         timeoutRef.current = null;
       }
     };
+
+    clearTimeoutRef();
+
+    const now = Date.now();
+    const elapsed = now - lastUpdatedRef.current;
+    const delay = elapsed >= intervalMs ? 0 : intervalMs - elapsed;
+
+    timeoutRef.current = window.setTimeout(() => {
+      lastUpdatedRef.current = Date.now();
+      setThrottledValue(value);
+      timeoutRef.current = null;
+    }, delay);
+
+    return clearTimeoutRef;
   }, [value, intervalMs]);
 
   return throttledValue;
