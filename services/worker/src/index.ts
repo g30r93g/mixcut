@@ -62,6 +62,8 @@ async function handleRecord(record: SQSRecord) {
       .sort(); // rely on m4acut naming order (usually track order)
 
 
+    // 6) Apply metadata
+    // 6.1) Artwork
     if (artworkBucket && artworkKey) {
       const artworkPath = await downloadArtworkForJob(artworkBucket, artworkKey, workDir);
 
@@ -70,7 +72,19 @@ async function handleRecord(record: SQSRecord) {
       }
     }
 
-    // 6) Load existing tracks for job from Supabase
+    const cueMetadata = await readCueMetadata(cuePath);
+
+    // 6.2) Genre
+    if (cueMetadata.genre) {
+      await applyAtomicParsleyMetadata(outputFiles, "--genre", cueMetadata.genre);
+    }
+
+    // 6.3) Release Year
+    if (cueMetadata.releaseYear) {
+      await applyAtomicParsleyMetadata(outputFiles, "--year", cueMetadata.releaseYear);
+    }
+
+    // 7) Load existing tracks for job from Supabase
     const { data: tracks, error: tracksErr } = await supabase
       .from("job_tracks")
       .select("*")
@@ -91,7 +105,7 @@ async function handleRecord(record: SQSRecord) {
 
     const outputPrefix = `jobs/${jobId}`;
 
-    // 7) Upload each file and update tracks
+    // 8) Upload each file and update tracks
     for (let i = 0; i < typedTracks.length; i++) {
       const track = typedTracks[i];
       const filePath = outputFiles[i];
@@ -111,7 +125,9 @@ async function handleRecord(record: SQSRecord) {
       if (updateTrackErr) throw updateTrackErr;
     }
 
-    // 8) Mark job COMPLETED, saving output location
+    // 9) TODO: Run `/Users/g30r93g/Projects/mixcut/services/api/src/handlers/bundle-job.ts` automatically to make ready for download. Then complete
+
+    // 10) Mark job COMPLETED, saving output location
     await updateJob(jobId, {
       status: "COMPLETED",
       output_bucket: OUTPUTS_BUCKET,
@@ -123,6 +139,7 @@ async function handleRecord(record: SQSRecord) {
       status: "FAILED",
       error_message: err?.message ?? "Unknown error in worker"
     });
+
     // Let the Lambda succeed, so SQS doesn't keep retrying forever.
     // If you want retries, rethrow here instead.
   } finally {
@@ -176,6 +193,36 @@ async function downloadArtworkForJob(
 async function applyArtworkToFiles(filePaths: string[], artworkPath: string) {
   for (const filePath of filePaths) {
     await execFileAsync("AtomicParsley", [filePath, "--artwork", artworkPath, "--overWrite"], {
+      cwd: path.dirname(filePath)
+    });
+  }
+}
+
+type CueMetadata = {
+  genre?: string;
+  releaseYear?: string;
+};
+
+async function readCueMetadata(cuePath: string): Promise<CueMetadata> {
+  const metadata: CueMetadata = {};
+  const contents = await fs.readFile(cuePath, "utf8");
+
+  const genreMatch = contents.match(/REM\s+GENRE\s+"([^"]+)"/i);
+  if (genreMatch?.[1]) {
+    metadata.genre = genreMatch[1].trim();
+  }
+
+  const dateMatch = contents.match(/REM\s+DATE\s+"([^"]+)"/i);
+  if (dateMatch?.[1]) {
+    metadata.releaseYear = dateMatch[1].trim();
+  }
+
+  return metadata;
+}
+
+async function applyAtomicParsleyMetadata(filePaths: string[], flag: string, value: string) {
+  for (const filePath of filePaths) {
+    await execFileAsync("AtomicParsley", [filePath, flag, value, "--overWrite"], {
       cwd: path.dirname(filePath)
     });
   }
