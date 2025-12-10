@@ -13,7 +13,7 @@
 
     "shared:pack": "pnpm -F @mixcut/shared pack --pack-destination services/worker/vendor",
 
-    "worker:bundle": "pnpm run shared:pack && docker build services/worker --platform linux/amd64",
+    "worker:bundle": "pnpm run shared:pack && docker build --platform linux/amd64 -f services/worker/Dockerfile .",
     "validator:bundle": "pnpm -F validator build",
 
     "website:build": "pnpm -F website build",
