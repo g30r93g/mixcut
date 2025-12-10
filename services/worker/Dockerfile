@@ -46,21 +46,27 @@ COPY --from=build /opt/m4acut /opt/m4acut
 ENV PATH="/opt/m4acut/usr/local/bin:${PATH}"
 
 # Build the worker code inside the image
-WORKDIR /tmp/build
+WORKDIR /repo
+ENV CI=true
 
-# Bring in package sources (build context is services/worker)
-COPY package.json tsconfig.json ./
-COPY vendor ./vendor
-COPY src ./src
+# Copy only the files needed for the worker + shared workspace packages
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
+COPY shared ./shared
+COPY services/worker ./services/worker
 
-# Install deps, build, then prune to prod-only.
-# Flatten dist into /tmp/build so index.js sits at project root
-RUN corepack enable && pnpm install --no-frozen-lockfile && pnpm run build && pnpm prune --prod && \
+# Install the minimal workspace graph, build shared first, then the worker,
+# and finally prune the worker package down to prod dependencies. The filter
+# keeps us from building the entire monorepo inside the image.
+RUN corepack enable && \
+    pnpm install --frozen-lockfile --filter "@mixcut/shared..." --filter "@mixcut/worker..." && \
+    pnpm --filter "@mixcut/shared" run build && \
+    pnpm --filter "@mixcut/worker" run build && \
+    cd services/worker && pnpm prune --prod && \
     cp -r dist/. . && rm -rf dist
 
 # Move built artifacts into Lambda task root
 WORKDIR ${LAMBDA_TASK_ROOT}
-RUN cp -r /tmp/build/. . && \
+RUN cp -r /repo/services/worker/. . && \
     rm -rf ./src
 
 CMD [ "index.handler" ]

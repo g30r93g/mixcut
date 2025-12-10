@@ -1,0 +1,11 @@
+node_modules
+**/node_modules
+**/dist
+**/.next
+**/.turbo
+.git
+.gitignore
+.DS_Store
+infra/aws/cdk.out
+infra/aws/.cdk.staging
+services/worker/vendor

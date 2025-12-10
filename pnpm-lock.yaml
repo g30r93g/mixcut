@@ -124,8 +124,8 @@ importers:
         specifier: ^3.600.0
         version: 3.932.0
       '@mixcut/shared':
-        specifier: file:vendor/mixcut-shared-0.1.0.tgz
-        version: file:services/worker/vendor/mixcut-shared-0.1.0.tgz
+        specifier: workspace:*
+        version: link:../../shared
       '@supabase/supabase-js':
         specifier: ^2.45.0
         version: 2.81.1
@@ -1072,10 +1072,6 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.9':
     resolution: {integrity: sha512-3Belt6tdc8bPgAtbcmdtNJlirVoTmEb5e2gC94PnkwEW9jI6CAHUeoG85tjWP5WquqfavoMtMwiG4P926ZKKuQ==}
-
-  '@mixcut/shared@file:services/worker/vendor/mixcut-shared-0.1.0.tgz':
-    resolution: {integrity: sha512-jnqr3CArFjaVmOcEXKF3IIrKeWeKjx1MBuh6uaAm37l0lcNQEZnMjdDADQtERpCIlM15XzzVdv1EInDIus/B4g==, tarball: file:services/worker/vendor/mixcut-shared-0.1.0.tgz}
-    version: 0.1.0
 
   '@mux/mux-data-google-ima@0.2.8':
     resolution: {integrity: sha512-0ZEkHdcZ6bS8QtcjFcoJeZxJTpX7qRIledf4q1trMWPznugvtajCjCM2kieK/pzkZj1JM6liDRFs1PJSfVUs2A==}
@@ -5642,8 +5638,6 @@ snapshots:
     dependencies:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
-
-  '@mixcut/shared@file:services/worker/vendor/mixcut-shared-0.1.0.tgz': {}
 
   '@mux/mux-data-google-ima@0.2.8':
     dependencies:

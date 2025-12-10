@@ -65,7 +65,6 @@ jobs:
             ${{ runner.os }}-worker-buildx-
 
       - name: Build worker Docker image
-        working-directory: services/worker
         env:
           DOCKER_BUILDKIT: 1
           CACHE_HIT: ${{ steps.worker-buildx-cache.outputs.cache-hit }}
@@ -83,6 +82,7 @@ jobs:
             ${cache_to_args} \
             --load \
             -t mixcut-worker-ci \
+            -f services/worker/Dockerfile \
             .
           if [ "$post_cache_update" = true ]; then
             # Persist the updated cache for the next run only when no cache hit.

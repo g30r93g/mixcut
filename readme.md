@@ -1,21 +1,24 @@
 # mixcut
 
-mixcut is a web-based tool for splitting long .m4a audio files into individual tracks using a provided CUE sheet.
-Users upload a single large audio file and its corresponding .cue file, and mixcut returns properly segmented .m4a tracks.
+mixcut is a web-based tool for splitting long .m4a audio files into individual tracks using a CUE sheet.
+Users can upload a single large audio file and its corresponding .cue file, or use the built-in waveform player + tracklist editor to build a new cue sheet, and mixcut returns properly segmented .m4a tracks (optionally with embedded artwork).
 
 The system uses:
 - Supabase for database + optional user accounts
 - AWS S3 for storage
 - AWS Lambda (container) for running m4acut
+- AtomicParsley for tagging + artwork embedding inside the worker image
 - Next.js for the frontend
 - A clean, service-oriented backend (validator, worker)
 - A shared CUE parser library for both server and client
 
 ## How it works
 
-1. User uploads assets (`.m4a` & `.cue`)
+1. User prepares assets (`.m4a`, `.cue`, optional artwork)
 
-    The website requests a new job from the backend, receives presigned S3 upload URLs, and uploads both files directly to S3.
+    The website exposes a waveform player with zoom + playback controls next to a tracklist editor. Users can drop an existing `.cue`, or edit track markers/metadata inline and have the client generate the `.cue` before upload. Optional cover artwork (PNG/JPG) can be added alongside disc-level metadata such as genre and release year.
+
+    When the user clicks “Upload”, the frontend requests a new job from the backend, receives presigned S3 upload URLs, and uploads the audio, cue, and artwork (if provided) directly to S3.
 
     Supabase records:
     - Job metadata
@@ -35,14 +38,15 @@ The system uses:
 
 3. Cutting with m4acut
 
-    The worker Lambda runs inside a container image containing m4acut.
+    The worker Lambda runs inside a container image containing m4acut (for slicing) and AtomicParsley (for tagging/artwork).
 
     For each job:
-    1.	Downloads the .m4a + .cue from S3
+    1.	Downloads the .m4a + .cue (and artwork, if present) from S3
     2.	Runs m4acut to slice the audio
-    3.	Uploads each generated track to an outputs bucket
-    4.	Updates each track record in Supabase with its S3 key
-    5.	Marks the job `COMPLETED` (or `FAILED` on error)
+    3.	Embeds artwork, genre, and release year tags via AtomicParsley using data parsed from the CUE file
+    4.	Uploads each generated track to an outputs bucket
+    5.	Updates each track record in Supabase with its S3 key
+    6.	Marks the job `COMPLETED` (or `FAILED` on error)
 
 4. User retrieves results
 
@@ -58,6 +62,7 @@ The system uses:
   - Run the Next.js site: `pnpm website:dev`.
   - Lint/test all packages: `pnpm lint`, `pnpm test`.
   - Bundle Lambdas for deployment: `pnpm validator:bundle` and `pnpm worker:bundle`.
+  - Build the worker container locally (needs linux/amd64): `docker build --platform linux/amd64 -f services/worker/Dockerfile .`.
 
 ## Cloud Deployment
 1. Provision Supabase. Note your URL, service role key and publishable/anon key.
