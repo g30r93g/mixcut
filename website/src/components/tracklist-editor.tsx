@@ -15,17 +15,11 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
-import {
-    Dropzone,
-    DropzoneContent,
-    DropzoneEmptyState
-} from '@/components/ui/shadcn-io/dropzone';
 import { EllipsisVertical, FilePenLine, Plus, Upload } from 'lucide-react';
-import { useCallback, useMemo, useRef, useState } from 'react';
-import ReactPlayer from 'react-player';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
+import { useCallback, useMemo, useState } from 'react';
 import { Badge } from './ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
+import { Dropzone, DropzoneContent, DropzoneEmptyState } from './ui/shadcn-io/dropzone';
 
 export type CueTrackEntry = {
     trackNumber: number;
@@ -42,15 +36,8 @@ export type OverallDetails = {
 };
 
 type TracklistEditorProps = {
-    playerUrl: string | undefined;
     isBusy: boolean;
-    audioFile: File | null;
-    audioProgress: number | null;
-    onLocalAudioDrop: (files: File[]) => void;
-    onPlayerDuration: (ms: number) => void;
-    onPlayerProgress: (ms: number) => void;
     currentMs: number;
-    durationMs: number;
     formatTime: (ms: number) => string;
     cueFile: File | null;
     cueProgress: number | null;
@@ -58,6 +45,7 @@ type TracklistEditorProps = {
     tracks: CueTrackEntry[];
     activeTrack: CueTrackEntry | null;
     trackProgressPercent: (startMs: number, nextStartMs?: number) => number;
+    onRequestSeek: (ms: number) => void;
     onUpdateTrack: (index: number, patch: Partial<CueTrackEntry>) => void;
     onRemoveTrack: (index: number) => void;
     onAddTrack: (startMs: number | null) => void;
@@ -69,15 +57,8 @@ type TracklistEditorProps = {
 };
 
 export function TracklistEditor({
-    playerUrl,
     isBusy,
-    audioFile,
-    audioProgress,
-    onLocalAudioDrop,
-    onPlayerDuration,
-    onPlayerProgress,
     currentMs,
-    durationMs,
     formatTime,
     cueFile,
     cueProgress,
@@ -85,6 +66,7 @@ export function TracklistEditor({
     tracks,
     activeTrack,
     trackProgressPercent,
+    onRequestSeek,
     onUpdateTrack,
     onRemoveTrack,
     onAddTrack,
@@ -100,36 +82,6 @@ export function TracklistEditor({
     );
 
     const [cueDialogOpen, setCueDialogOpen] = useState<boolean>(false);
-    const playerRef = useRef<HTMLVideoElement | null>(null);
-
-    const seekToMs = (ms: number) => {
-        const player = playerRef.current;
-        if (!player) return;
-        player.currentTime = ms / 1000;
-    };
-
-    const setPlayerRef = useCallback((player: HTMLVideoElement | null) => {
-        playerRef.current = player;
-    }, []);
-
-    const handleDurationChange = () => {
-        const player = playerRef.current;
-        if (!player) return;
-        onPlayerDuration(player.duration * 1000);
-    };
-
-    const handleTimeUpdate = () => {
-        const player = playerRef.current;
-        if (!player || player.seeking) return;
-        onPlayerProgress(player.currentTime * 1000);
-    };
-
-    const getPlayerCurrentTime = () => {
-        const player = playerRef.current;
-        if (!player) return null;
-        return player.currentTime * 1000;
-    };
-
     const handleOverallChange = (field: keyof OverallDetails, value: string) => {
         onUpdateOverall({ [field]: value });
     };
@@ -178,128 +130,84 @@ export function TracklistEditor({
                     </DialogContent>
                 </Dialog>
             </div>
-            <CardContent className="grid gap-6 md:grid-cols-2 max-h-[75vh]">
-                <div className="flex flex-col gap-4">
-                    <Dropzone
-                        accept={{ 'audio/m4a': ['.m4a'] }}
-                        disabled={isBusy}
-                        maxFiles={1}
-                        onDrop={onLocalAudioDrop}
-                        progress={audioProgress}
-                        src={audioFile ? [audioFile] : undefined}
-                    >
-                        <DropzoneEmptyState />
-                        <DropzoneContent />
-                    </Dropzone>
-
-                    <div className="overflow-hidden rounded-md border bg-muted">
-                        <ReactPlayer
-                            ref={setPlayerRef}
-                            src={playerUrl}
-                            controls
-                            width="100%"
-                            height="240px"
-                            onDurationChange={handleDurationChange}
-                            onTimeUpdate={handleTimeUpdate}
-                        />
-                        <div className="flex items-center justify-between px-4 py-2 text-xs text-muted-foreground">
-                            <span>Now playing</span>
-                            <span>
-                                {formatTime(currentMs)} / {formatTime(durationMs)}
-                            </span>
+            <CardContent className="grid grid-cols-2 gap-6">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Overall Details</CardTitle>
+                        <CardDescription>
+                            Provide general information about this mix or set. These map to the disc-level tags in a traditional CUE sheet.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex flex-col gap-3">
+                        <div className="space-y-1">
+                            <Label htmlFor="overall-title">Title</Label>
+                            <Input
+                                id="overall-title"
+                                value={overallDetails.title}
+                                onChange={(e) => handleOverallChange('title', e.target.value)}
+                                placeholder="Mix / album title"
+                            />
                         </div>
-                    </div>
-                </div>
-
-                <div className="flex flex-col gap-4 overflow-y-scroll">
-                    <Accordion
-                        type="single"
-                        collapsible
-                        className="w-full"
-                        defaultValue="item-1"
-                    >
-                        <AccordionItem value="item-1">
-                            <AccordionTrigger className="hover:no-underline!">
-                                <div>
-                                    <p className="text-muted-foreground font-medium text-lg">Overall Details</p>
-                                    <p className="text-xs text-muted-foreground">
-                                        Provide general information about this mix or set. These map to the disc-level tags in a traditional CUE sheet.
-                                    </p>
-                                </div>
-                            </AccordionTrigger>
-                            <AccordionContent>
-                                <Card>
-                                    <CardContent className="flex flex-col gap-3">
-                                        <div className="space-y-1">
-                                            <Label htmlFor="overall-title">Title</Label>
-                                            <Input
-                                                id="overall-title"
-                                                value={overallDetails.title}
-                                                onChange={(e) => handleOverallChange('title', e.target.value)}
-                                                placeholder="Mix / album title"
-                                            />
-                                        </div>
-                                        <div className="space-y-1">
-                                            <Label htmlFor="overall-performer">Performer</Label>
-                                            <Input
-                                                id="overall-performer"
-                                                value={overallDetails.performer}
-                                                onChange={(e) => handleOverallChange('performer', e.target.value)}
-                                                placeholder="Artist or DJ"
-                                            />
-                                        </div>
-                                        <div className="space-y-1">
-                                            <Label htmlFor="overall-genre">Genre</Label>
-                                            <Input
-                                                id="overall-genre"
-                                                value={overallDetails.genre}
-                                                onChange={(e) => handleOverallChange('genre', e.target.value)}
-                                                placeholder="Genre"
-                                            />
-                                        </div>
-                                        <div className="space-y-1">
-                                            <Label htmlFor="overall-release-year">Release Year</Label>
-                                            <Input
-                                                id="overall-release-year"
-                                                value={overallDetails.releaseYear}
-                                                onChange={(e) => handleOverallChange('releaseYear', e.target.value)}
-                                                placeholder="2024"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label>Artwork</Label>
-                                            <Dropzone
-                                                accept={{ 'image/png': ['.png'], 'image/jpg': ['.jpg', '.jpeg'] }}
-                                                disabled={isBusy}
-                                                maxFiles={1}
-                                                onDrop={onArtworkDrop}
-                                                progress={artworkProgress}
-                                                src={artworkFile ? [artworkFile] : undefined}
-                                            >
-                                                <DropzoneEmptyState />
-                                                <DropzoneContent />
-                                            </Dropzone>
-                                            {artworkFile ? (
-                                                <p className="text-xs text-muted-foreground">Selected: {artworkFile.name}</p>
-                                            ) : (
-                                                <p className="text-xs text-muted-foreground">PNG or JPG up to 10MB.</p>
-                                            )}
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            </AccordionContent>
-                        </AccordionItem>
-                    </Accordion>
+                        <div className="space-y-1">
+                            <Label htmlFor="overall-performer">Performer</Label>
+                            <Input
+                                id="overall-performer"
+                                value={overallDetails.performer}
+                                onChange={(e) => handleOverallChange('performer', e.target.value)}
+                                placeholder="Artist or DJ"
+                            />
+                        </div>
+                        <div className="space-y-1">
+                            <Label htmlFor="overall-genre">Genre</Label>
+                            <Input
+                                id="overall-genre"
+                                value={overallDetails.genre}
+                                onChange={(e) => handleOverallChange('genre', e.target.value)}
+                                placeholder="Genre"
+                            />
+                        </div>
+                        <div className="space-y-1">
+                            <Label htmlFor="overall-release-year">Release Year</Label>
+                            <Input
+                                id="overall-release-year"
+                                value={overallDetails.releaseYear}
+                                onChange={(e) => handleOverallChange('releaseYear', e.target.value)}
+                                placeholder="2024"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Artwork</Label>
+                            <Dropzone
+                                accept={{ 'image/png': ['.png'], 'image/jpg': ['.jpg', '.jpeg'] }}
+                                disabled={isBusy}
+                                maxFiles={1}
+                                onDrop={onArtworkDrop}
+                                progress={artworkProgress}
+                                src={artworkFile ? [artworkFile] : undefined}
+                            >
+                                <DropzoneEmptyState />
+                                <DropzoneContent />
+                            </Dropzone>
+                            {artworkFile ? (
+                                <p className="text-xs text-muted-foreground">Selected: {artworkFile.name}</p>
+                            ) : (
+                                <p className="text-xs text-muted-foreground">PNG or JPG up to 10MB.</p>
+                            )}
+                        </div>
+                    </CardContent>
+                </Card>
+                <div className="flex flex-col gap-4 max-h-[75vh] overflow-y-scroll">
                     <div className="flex flex-row gap-1.5">
                         <span className="text-muted-foreground font-medium text-lg">Tracks</span>
                         <Badge className="my-auto" variant="secondary">{sortedTracks.length}</Badge>
                     </div>
-                    <div className="flex flex-col gap-3">
+                    <div className="flex flex-col gap-3 pb-4">
                         {sortedTracks.map((track, idx) => {
-                            const nextStart = sortedTracks[idx + 1]?.startMs;
+                            const nextTrack = sortedTracks[idx + 1];
+                            const nextStart = nextTrack?.startMs;
                             const isActive = activeTrack?.trackNumber === track.trackNumber;
                             const progress = trackProgressPercent(track.startMs, nextStart);
-                            const handleCardActivate = () => seekToMs(track.startMs);
+                            const handleCardActivate = () => onRequestSeek(track.startMs);
 
                             return (
                                 <Card
@@ -319,7 +227,6 @@ export function TracklistEditor({
                                     tabIndex={0}
                                 >
                                     <CardHeader className="pb-3">
-
                                         <div className="flex items-start justify-between gap-6">
                                             <div className="flex flex-col gap-2 w-full">
                                                 <p className="text-muted-foreground py-1.5">
@@ -368,7 +275,7 @@ export function TracklistEditor({
                                 </Card>
                             );
                         })}
-                        <Button type="button" variant="outline" onClick={() => onAddTrack(getPlayerCurrentTime())} className="w-full" disabled={isBusy}>
+                        <Button type="button" variant="outline" onClick={() => onAddTrack(currentMs)} className="w-full" disabled={isBusy}>
                             <Plus className="mr-2 size-4" /> Add Track
                         </Button>
                     </div>

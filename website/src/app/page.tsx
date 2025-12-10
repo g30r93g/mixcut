@@ -1,14 +1,15 @@
 'use client';
 
 import { ConfirmUpload } from '@/components/confirm-upload';
-import { TracklistEditor, type CueTrackEntry, type OverallDetails } from '@/components/tracklist-editor';
 import { ReplaceContentDialog } from '@/components/replace-content-dialog';
+import { TrackWaveform, type TrackWaveformHandle } from '@/components/track-waveform';
+import { TracklistEditor, type CueTrackEntry, type OverallDetails } from '@/components/tracklist-editor';
 import { buildCueFile, emptyOverallDetails } from '@/lib/cue-helpers';
 import { formatTimeLabel } from '@/lib/time';
+import { parseCue } from '@mixcut/parser';
 import { AlertTriangle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useCallback, useMemo, useRef, useState } from 'react';
-import { parseCue } from '@mixcut/parser';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useCueValidation } from './hooks/useCueValidation';
 import { useObjectUrl } from './hooks/useObjectUrl';
 import { useUploadWorkflow } from './hooks/useUploadWorkflow';
@@ -25,6 +26,7 @@ export default function UploadPage() {
   const [error, setError] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const confirmActionRef = useRef<(() => void) | null>(null);
+  const trackWaveformRef = useRef<TrackWaveformHandle | null>(null);
 
   const playerUrl = useObjectUrl(audioFile);
   const { cueValid, resetCueValidation } = useCueValidation({
@@ -149,6 +151,8 @@ export default function UploadPage() {
     [tracks],
   );
 
+  const throttledCurrentMs = useThrottledValue(currentMs, 100);
+
   const activeTrack = useMemo(() => {
     const ms = currentMs;
     let current: CueTrackEntry | null = null;
@@ -199,13 +203,14 @@ export default function UploadPage() {
     setTracks((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
-  const trackProgressPercent = (startMs: number, nextStartMs: number | undefined) => {
+  const trackProgressPercent = useCallback((startMs: number, nextStartMs: number | undefined) => {
+
     const windowEnd = nextStartMs ?? durationMs;
     if (!Number.isFinite(windowEnd) || windowEnd <= startMs) return 0;
-    if (currentMs < startMs) return 0;
-    const clamped = Math.min(currentMs, windowEnd);
+    if (throttledCurrentMs < startMs) return 0;
+    const clamped = Math.min(throttledCurrentMs, windowEnd);
     return Math.min(100, ((clamped - startMs) / (windowEnd - startMs)) * 100);
-  };
+  }, [throttledCurrentMs, durationMs]);
 
   const handleLocalAudioDrop = useCallback(
     (files: File[]) => {
@@ -234,6 +239,10 @@ export default function UploadPage() {
     setConfirmOpen(false);
   }, []);
 
+  const handleTrackSeek = useCallback((ms: number) => {
+    trackWaveformRef.current?.seekTo(ms);
+  }, []);
+
   return (
     <main className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8">
       <ReplaceContentDialog
@@ -248,7 +257,8 @@ export default function UploadPage() {
         onConfirm={handleConfirmReplace}
       />
 
-      <TracklistEditor
+      <TrackWaveform
+        ref={trackWaveformRef}
         playerUrl={playerUrl}
         isBusy={isBusy}
         audioFile={audioFile}
@@ -259,12 +269,19 @@ export default function UploadPage() {
         currentMs={currentMs}
         durationMs={durationMs}
         formatTime={formatTimeLabel}
+      />
+
+      <TracklistEditor
+        isBusy={isBusy}
+        currentMs={currentMs}
+        formatTime={formatTimeLabel}
         cueFile={cueFile}
         cueProgress={cueProgress}
         onCueDrop={handleCueDrop}
         tracks={tracks}
         activeTrack={activeTrack}
         trackProgressPercent={trackProgressPercent}
+        onRequestSeek={handleTrackSeek}
         onUpdateTrack={updateTrack}
         onRemoveTrack={removeTrack}
         onAddTrack={addTrack}
@@ -291,4 +308,42 @@ export default function UploadPage() {
       )}
     </main>
   );
+}
+
+function useThrottledValue<T>(value: T, intervalMs: number): T {
+  const [throttledValue, setThrottledValue] = useState(value);
+  const lastUpdatedRef = useRef<number>(Date.now());
+  const timeoutRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const now = Date.now();
+    const elapsed = now - lastUpdatedRef.current;
+
+    if (elapsed >= intervalMs) {
+      lastUpdatedRef.current = now;
+      setThrottledValue(value);
+      return () => {
+        if (timeoutRef.current) {
+          window.clearTimeout(timeoutRef.current);
+          timeoutRef.current = null;
+        }
+      };
+    }
+
+    const remaining = intervalMs - elapsed;
+    timeoutRef.current = window.setTimeout(() => {
+      lastUpdatedRef.current = Date.now();
+      setThrottledValue(value);
+      timeoutRef.current = null;
+    }, remaining);
+
+    return () => {
+      if (timeoutRef.current) {
+        window.clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+    };
+  }, [value, intervalMs]);
+
+  return throttledValue;
 }
