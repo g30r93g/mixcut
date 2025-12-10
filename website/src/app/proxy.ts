@@ -9,7 +9,8 @@ const requireAuth = process.env.REQUIRE_AUTH ? Boolean(process.env.REQUIRE_AUTH)
 
 // This function can be marked `async` if using `await` inside
 export default async function proxy(request: NextRequest) {
-    if (!requireAuth) {
+    const isNotAuthed = false;
+    if (requireAuth && isNotAuthed) {
       return NextResponse.redirect('/auth/login')
     }
 

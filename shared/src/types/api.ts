@@ -5,6 +5,7 @@ export interface CreateJobResponse {
   jobId: string;
   uploadUrls: {
     audio: string;
+    artwork?: string;
     cue: string;
   };
 }

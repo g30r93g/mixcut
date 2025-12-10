@@ -6,7 +6,7 @@ FROM amazonlinux:2 AS build
 ENV INSTALL_ROOT=/opt/m4acut
 
 RUN yum update -y && \
-    yum install -y git gcc gcc-c++ make autoconf automake libtool pkgconfig yasm which && \
+    yum install -y git gcc gcc-c++ make autoconf automake libtool pkgconfig yasm which curl unzip && \
     yum clean all && rm -rf /var/cache/yum
 
 WORKDIR /build
@@ -29,6 +29,15 @@ RUN git clone https://github.com/nu774/m4acut.git && \
     make install && \
     make install DESTDIR=${INSTALL_ROOT}
 
+# Install AtomicParsley release binary
+ARG ATOMICPARSLEY_VERSION=20240608.083822.1ed9031
+RUN curl -L -o AtomicParsleyLinux.zip https://github.com/wez/atomicparsley/releases/download/${ATOMICPARSLEY_VERSION}/AtomicParsleyLinux.zip && \
+    unzip AtomicParsleyLinux.zip && \
+    install -m 0755 AtomicParsley /usr/local/bin/AtomicParsley && \
+    mkdir -p ${INSTALL_ROOT}/usr/local/bin && \
+    install -m 0755 AtomicParsley ${INSTALL_ROOT}/usr/local/bin/AtomicParsley && \
+    rm -f AtomicParsley AtomicParsleyLinux.zip
+
 # Lambda runtime with Node
 FROM public.ecr.aws/lambda/nodejs:22
 
@@ -41,6 +50,7 @@ WORKDIR /tmp/build
 
 # Bring in package sources (build context is services/worker)
 COPY package.json tsconfig.json ./
+COPY vendor ./vendor
 COPY src ./src
 
 # Install deps, build, then prune to prod-only.

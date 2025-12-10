@@ -1,6 +1,8 @@
 import { GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { SQSClient, SendMessageCommand } from "@aws-sdk/client-sqs";
 import { parseCue, validateCue } from "@mixcut/parser";
+import type { WorkerMessage } from "@mixcut/shared";
+
 import { supabase } from "./lib/supabase";
 import { ValidatorEvent } from "./lib/types";
 
@@ -64,16 +66,20 @@ export const handler = async (event: ValidatorEvent) => {
     }
 
     // 5. Enqueue worker job
+    const msgBody: WorkerMessage = {
+      jobId,
+      audioBucket: job.audio_bucket,
+      audioKey: job.audio_key,
+      artworkBucket: job.artwork_bucket,
+      artworkKey: job.artwork_key,
+      cueBucket: job.cue_bucket,
+      cueKey: job.cue_key
+    };
+
     await sqs.send(
       new SendMessageCommand({
         QueueUrl: JOBS_QUEUE_URL,
-        MessageBody: JSON.stringify({
-          jobId,
-          audioBucket: job.audio_bucket,
-          audioKey: job.audio_key,
-          cueBucket: job.cue_bucket,
-          cueKey: job.cue_key
-        })
+        MessageBody: JSON.stringify(msgBody)
       })
     );
 

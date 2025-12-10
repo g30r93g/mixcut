@@ -12,6 +12,7 @@ coverage/
 **/out/
 **/cdk.out/
 *.tsbuildinfo
+*.tgz
 
 # Logs
 pnpm-debug.log*

@@ -1,32 +1,17 @@
-import { gatewayUrl, buildGatewayHeaders } from '@/lib/gateway-client';
+import { buildGatewayHeaders, gatewayUrl } from '@/lib/gateway-client';
 import { retryWithBackoff } from '@/lib/retry-utils';
-import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 
-async function requireUserId() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
+type JobRouteParams = { params: Promise<{ jobId: string }> };
 
-  if (error || !user) {
-    return null;
-  }
+export async function GET(_req: NextRequest, context: JobRouteParams) {
+  // todo: implement
+  // const userId = await requireUserId();
+  // if (!userId) {
+  //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  // }
 
-  return user.id;
-}
-
-export async function GET(
-  _req: NextRequest,
-  { params }: { params: { jobId: string } },
-) {
-  const userId = await requireUserId();
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const jobId = params.jobId;
+  const { jobId } = await context.params;
   if (!jobId) {
     return NextResponse.json({ error: 'Missing job id' }, { status: 400 });
   }
@@ -34,7 +19,7 @@ export async function GET(
   try {
     const response = await retryWithBackoff(() =>
       fetch(gatewayUrl(`/jobs/${jobId}`), {
-        headers: buildGatewayHeaders(userId),
+        headers: buildGatewayHeaders(),
       }),
     );
 

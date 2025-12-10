@@ -6,12 +6,14 @@ const TRACK_RE = /^TRACK\s+(\d+)\s+(\w+)/i;
 const TITLE_RE = /^TITLE\s+"(.+?)"$/i;
 const PERFORMER_RE = /^PERFORMER\s+"(.+?)"$/i;
 const INDEX_RE = /^INDEX\s+01\s+(\d{2}):(\d{2}):(\d{2})$/i;
+const REM_GENRE_RE = /^REM\s+GENRE\s+"?(.+?)"?$/i;
+const REM_DATE_RE = /^REM\s+(?:DATE|YEAR)\s+"?(.+?)"?$/i;
 
 export function parseCue(cueText: string): ParsedCue {
   const lines = cueText
     .split(/\r?\n/)
     .map((l) => l.trim())
-    .filter((l) => l.length > 0 && !l.startsWith("REM ")); // drop comments
+    .filter((l) => l.length > 0);
 
   let fileName: string | undefined;
   const tracks: CueTrack[] = [];
@@ -20,6 +22,10 @@ export function parseCue(cueText: string): ParsedCue {
   let currentTitle: string | undefined;
   let currentPerformer: string | undefined;
   let currentStartMs: number | undefined;
+  let overallTitle = "";
+  let overallPerformer = "";
+  let overallGenre = "";
+  let overallReleaseYear = "";
 
   const flushTrack = () => {
     if (
@@ -57,13 +63,21 @@ export function parseCue(cueText: string): ParsedCue {
 
     if (TITLE_RE.test(raw)) {
       const m = raw.match(TITLE_RE)!;
-      currentTitle = m[1];
+      if (currentTrackNumber === undefined) {
+        overallTitle = m[1];
+      } else {
+        currentTitle = m[1];
+      }
       continue;
     }
 
     if (PERFORMER_RE.test(raw)) {
       const m = raw.match(PERFORMER_RE)!;
-      currentPerformer = m[1];
+      if (currentTrackNumber === undefined) {
+        overallPerformer = m[1];
+      } else {
+        currentPerformer = m[1];
+      }
       continue;
     }
 
@@ -76,11 +90,30 @@ export function parseCue(cueText: string): ParsedCue {
       continue;
     }
 
+    if (REM_GENRE_RE.test(raw)) {
+      const m = raw.match(REM_GENRE_RE)!;
+      overallGenre = m[1];
+      continue;
+    }
+
+    if (REM_DATE_RE.test(raw)) {
+      const m = raw.match(REM_DATE_RE)!;
+      overallReleaseYear = m[1];
+      continue;
+    }
+
     // Ignore other directives for now (CATALOG, ISRC, etc.)
   }
 
   // flush final track
   flushTrack();
 
-  return { fileName, tracks };
+  return {
+    fileName,
+    title: overallTitle,
+    performer: overallPerformer,
+    genre: overallGenre,
+    releaseYear: overallReleaseYear,
+    tracks
+  };
 }

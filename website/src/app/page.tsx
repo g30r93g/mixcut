@@ -1,271 +1,349 @@
 'use client';
 
-import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import {
-  Dropzone,
-  DropzoneContent,
-  DropzoneEmptyState,
-} from '@/components/ui/shadcn-io/dropzone';
-import { Stage } from '@/types/jobs';
-import { parseCue, validateCue } from '@mixcut/parser';
-import type { CreateJobResponse } from '@mixcut/shared';
-import { AlertTriangle, CheckCircle2, Loader2, Scissors, Upload } from 'lucide-react';
-import { retryWithBackoff } from '@/lib/retry-utils';
+import { ConfirmUpload } from '@/components/confirm-upload';
+import { ReplaceContentDialog } from '@/components/replace-content-dialog';
+import { TrackWaveform, type TrackWaveformHandle } from '@/components/track-waveform';
+import { TracklistEditor, type CueTrackEntry, type OverallDetails } from '@/components/tracklist-editor';
+import { buildCueFile, emptyOverallDetails } from '@/lib/cue-helpers';
+import { formatTimeLabel } from '@/lib/time';
+import { parseCue } from '@mixcut/parser';
+import { AlertTriangle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-
-const apiUrl = (path: string) => `/api${path}`;
-
-async function uploadToPresigned(
-  url: string,
-  file: File,
-  fallbackType: string,
-  onProgress?: (percent: number) => void
-) {
-  const contentType = file.type || fallbackType;
-
-  const attemptUpload = () =>
-    new Promise<void>((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.open('PUT', url);
-      xhr.setRequestHeader('Content-Type', contentType);
-
-      xhr.upload.onprogress = (event) => {
-        if (event.lengthComputable && onProgress) {
-          const percent = Math.round((event.loaded / event.total) * 100);
-          onProgress(percent);
-        }
-      };
-
-      xhr.onerror = () => reject(new Error('Network error uploading file'));
-      xhr.onload = () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          if (onProgress) onProgress(100);
-          resolve();
-        } else {
-          reject(new Error(`Upload failed with status ${xhr.status}`));
-        }
-      };
-
-      xhr.send(file);
-    });
-
-  // Retry transient network failures with exponential backoff
-  await retryWithBackoff(attemptUpload);
-}
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCueValidation } from './hooks/useCueValidation';
+import { useObjectUrl } from './hooks/useObjectUrl';
+import { useUploadWorkflow } from './hooks/useUploadWorkflow';
 
 export default function UploadPage() {
   const router = useRouter();
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [cueFile, setCueFile] = useState<File | null>(null);
-  const [jobId, setJobId] = useState<string | null>(null);
-  const [stage, setStage] = useState<Stage>('idle');
+  const [tracks, setTracks] = useState<CueTrackEntry[]>([]);
+  const [currentMs, setCurrentMs] = useState<number>(0);
+  const [durationMs, setDurationMs] = useState<number>(0);
+  const [overallDetails, setOverallDetails] = useState<OverallDetails>(emptyOverallDetails);
+  const [artworkFile, setArtworkFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [cueValid, setCueValid] = useState<boolean | null>(null);
-  const [audioProgress, setAudioProgress] = useState<number | null>(null);
-  const [cueProgress, setCueProgress] = useState<number | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const confirmActionRef = useRef<(() => void) | null>(null);
+  const trackWaveformRef = useRef<TrackWaveformHandle | null>(null);
+
+  const playerUrl = useObjectUrl(audioFile);
+  const { cueValid, resetCueValidation } = useCueValidation({
+    cueFile,
+    tracks,
+    overallDetails,
+    onError: setError,
+  });
+
+  const generateCueFromTracks = useCallback(() => {
+    const file = buildCueFile({
+      entries: tracks,
+      overallDetails,
+      audioFileName: audioFile?.name,
+    });
+    if (file) {
+      setCueFile(file);
+    }
+    return file;
+  }, [audioFile, overallDetails, tracks]);
+
+  const {
+    jobId,
+    stage,
+    audioProgress,
+    cueProgress,
+    artworkProgress,
+    actionLabel,
+    actionDisabled,
+    handleUpload,
+    handleStart,
+    setArtworkProgress,
+  } = useUploadWorkflow({
+    audioFile,
+    cueFile,
+    artworkFile,
+    cueValid,
+    generateCueFile: generateCueFromTracks,
+    setError,
+    router,
+  });
+
+  const resetCueContent = useCallback(() => {
+    setCueFile(null);
+    setTracks([]);
+    resetCueValidation();
+    setOverallDetails({ ...emptyOverallDetails });
+    setArtworkFile(null);
+    setArtworkProgress(null);
+  }, [resetCueValidation, setArtworkProgress]);
 
   const isBusy = stage === 'creating' || stage === 'uploading' || stage === 'starting';
 
-  useEffect(() => {
-    const runValidation = async () => {
-      if (!cueFile) {
-        setCueValid(null);
-        return;
+  const hasExistingContent = useMemo(() => {
+    const hasOverallFields = Object.values(overallDetails).some((value) =>
+      typeof value === 'string' ? value.trim().length > 0 : false,
+    );
+    return Boolean(cueFile || tracks.length > 0 || audioFile || hasOverallFields || artworkFile);
+  }, [audioFile, artworkFile, cueFile, overallDetails, tracks]);
+
+  const requestChangeConfirmation = useCallback(
+    (action: () => void) => {
+      if (hasExistingContent) {
+        confirmActionRef.current = action;
+        setConfirmOpen(true);
+      } else {
+        action();
       }
+    },
+    [hasExistingContent],
+  );
 
-      try {
-        const cueText = await cueFile.text();
-        const parsed = parseCue(cueText);
-        const validation = validateCue(parsed);
-        if (!validation.ok) {
-          throw new Error(validation.error || 'Invalid CUE sheet');
-        }
-        setCueValid(true);
-        setError(null);
-      } catch (err: unknown) {
-        setCueValid(false);
-        const message = err instanceof Error ? err.message : 'Invalid CUE sheet';
-        setError(message);
-      }
-    };
+  const updateOverallDetails = useCallback((patch: Partial<OverallDetails>) => {
+    setOverallDetails((prev) => ({ ...prev, ...patch }));
+  }, []);
 
-    void runValidation();
-  }, [cueFile]);
-
-  const handleUpload = useCallback(async () => {
-    if (!audioFile || !cueFile) {
-      setError('Please select both an .m4a file and its matching .cue file.');
-      return;
-    }
-
-    if (cueValid !== true) {
-      setError('Invalid CUE sheet');
-      return;
-    }
-
-    setError(null);
-    setStage('creating');
-
-    try {
-      const response = await retryWithBackoff(() =>
-        fetch(apiUrl('/jobs'), {
-          method: 'POST',
-        })
-      );
-
-      if (!response.ok) {
-        const message = await response.text();
-        throw new Error(message || 'Failed to create job');
-      }
-
-      const payload = (await response.json()) as CreateJobResponse;
-      setJobId(payload.jobId);
-      setStage('uploading');
-      setAudioProgress(0);
-      setCueProgress(0);
-
-      await Promise.all([
-        uploadToPresigned(payload.uploadUrls.audio, audioFile, 'audio/mp4', setAudioProgress),
-        uploadToPresigned(payload.uploadUrls.cue, cueFile, 'text/plain', setCueProgress),
-      ]);
-
-      setStage('uploaded');
-      setAudioProgress(100);
-      setCueProgress(100);
-      } catch (err: unknown) {
-        console.error(err);
-        const message = err instanceof Error ? err.message : 'Upload failed';
-        setError(message);
-        setAudioProgress(null);
-        setCueProgress(null);
-        setStage('idle');
-      }
-  }, [audioFile, cueFile, cueValid]);
-
-  const handleStart = useCallback(async () => {
-    if (!jobId) return;
-    setError(null);
-    setStage('starting');
-
-    try {
-      const response = await retryWithBackoff(() =>
-        fetch(apiUrl(`/jobs/${jobId}/start`), {
-          method: 'POST',
-        })
-      );
-
-      if (!response.ok) {
-        const message = await response.text();
-        throw new Error(message || 'Failed to start processing');
-      }
-
-      router.push(`/job/${jobId}`);
-    } catch (err: unknown) {
-      console.error(err);
-      const message = err instanceof Error ? err.message : 'Failed to start processing';
-      setError(message);
-      setStage('uploaded');
-    }
-  }, [jobId, router]);
-
-  const actionLabel = useMemo(() => {
-    if (stage === 'uploaded') return 'Cut';
-    if (stage === 'creating') return 'Creating job…';
-    if (stage === 'uploading') return 'Uploading…';
-    if (stage === 'starting') return 'Starting…';
-    return 'Upload';
-  }, [stage]);
-
-  const actionDisabled = useMemo(() => {
-    if (stage === 'uploaded') {
-      return !jobId || isBusy;
-    }
-
-    return !audioFile || !cueFile || isBusy;
-  }, [audioFile, cueFile, jobId, isBusy, stage]);
+  const handleArtworkDrop = useCallback(
+    (files: File[]) => {
+      const next = files[0];
+      if (!next) return;
+      setArtworkFile(next);
+      setArtworkProgress(null);
+    },
+    [setArtworkProgress],
+  );
 
   const onAction = stage === 'uploaded' ? handleStart : handleUpload;
 
+  const handleCueDrop = useCallback(
+    (files: File[]) => {
+      const next = files[0];
+      if (!next) return;
+
+      const execute = async () => {
+        resetCueContent();
+        setCueFile(next);
+        try {
+          const text = await next.text();
+          const parsed = parseCue(text);
+          setTracks(parsed.tracks);
+          setOverallDetails({
+            title: parsed.title ?? '',
+            performer: parsed.performer ?? '',
+            genre: parsed.genre ?? '',
+            releaseYear: parsed.releaseYear ?? '',
+          });
+          setError(null);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Failed to parse CUE file';
+          setError(message);
+          setTracks([]);
+        }
+      };
+
+      void execute();
+    },
+    [resetCueContent],
+  );
+
+  const sortedTracks = useMemo(
+    () => [...tracks].sort((a, b) => a.trackNumber - b.trackNumber),
+    [tracks],
+  );
+
+  const throttledCurrentMs = useThrottledValue(currentMs, 100);
+
+  const activeTrack = useMemo(() => {
+    const ms = currentMs;
+    let current: CueTrackEntry | null = null;
+    for (let i = 0; i < sortedTracks.length; i++) {
+      const t = sortedTracks[i];
+      const nextStart = sortedTracks[i + 1]?.startMs ?? durationMs;
+      if (ms >= t.startMs && ms < nextStart) {
+        current = t;
+        break;
+      }
+      if (i === sortedTracks.length - 1 && ms >= t.startMs) {
+        current = t;
+      }
+    }
+    return current;
+  }, [currentMs, sortedTracks, durationMs]);
+
+  const addTrack = useCallback((startMs: number | null) => {
+    const nextNumber =
+      sortedTracks.length > 0
+        ? Math.max(...sortedTracks.map((t) => t.trackNumber)) + 1
+        : 1;
+    const lastStart = sortedTracks[sortedTracks.length - 1]?.startMs ?? 0;
+    const nextStart = startMs ?? lastStart + 60_000;
+    setTracks((prev) => [
+      ...prev,
+      {
+        trackNumber: nextNumber,
+        title: `Track ${nextNumber}`,
+        performer: 'Artist',
+        startMs: nextStart,
+      },
+    ]);
+  }, [sortedTracks]);
+
+  const updateTrack = useCallback(
+    (index: number, patch: Partial<CueTrackEntry>) => {
+      setTracks((prev) => {
+        const next = [...prev];
+        next[index] = { ...next[index], ...patch };
+        return next;
+      });
+    },
+    [],
+  );
+
+  const removeTrack = useCallback((index: number) => {
+    setTracks((prev) => prev.filter((_, i) => i !== index));
+  }, []);
+
+  const trackProgressPercent = useCallback((startMs: number, nextStartMs: number | undefined) => {
+
+    const windowEnd = nextStartMs ?? durationMs;
+    if (!Number.isFinite(windowEnd) || windowEnd <= startMs) return 0;
+    if (throttledCurrentMs < startMs) return 0;
+    const clamped = Math.min(throttledCurrentMs, windowEnd);
+    return Math.min(100, ((clamped - startMs) / (windowEnd - startMs)) * 100);
+  }, [throttledCurrentMs, durationMs]);
+
+  const handleLocalAudioDrop = useCallback(
+    (files: File[]) => {
+      const next = files[0];
+      if (!next) return;
+
+      requestChangeConfirmation(() => {
+        resetCueContent();
+        setAudioFile(next);
+        setCurrentMs(0);
+        setDurationMs(0);
+      });
+    },
+    [requestChangeConfirmation, resetCueContent],
+  );
+
+  const handleConfirmReplace = useCallback(() => {
+    const action = confirmActionRef.current;
+    confirmActionRef.current = null;
+    setConfirmOpen(false);
+    action?.();
+  }, []);
+
+  const handleCancelReplace = useCallback(() => {
+    confirmActionRef.current = null;
+    setConfirmOpen(false);
+  }, []);
+
+  const handleTrackSeek = useCallback((ms: number) => {
+    trackWaveformRef.current?.seekTo(ms);
+  }, []);
+
   return (
-    <main className="mx-auto flex max-w-4xl flex-col gap-8 px-4 py-10">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-2xl">
-            <Upload className="size-5" /> Upload & Split
-          </CardTitle>
-          <CardDescription>
-            Drop in your source .m4a and matching .cue sheet. We will request
-            presigned uploads, send them to S3, then kick off the splitter.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2">
-          <Dropzone
-            accept={{ 'audio/mp4': ['.m4a'] }}
-            disabled={isBusy}
-            maxFiles={1}
-            onDrop={(files) => setAudioFile(files[0] ?? null)}
-            progress={audioProgress}
-            src={audioFile ? [audioFile] : undefined}
-          >
-            <DropzoneEmptyState />
-            <DropzoneContent />
-          </Dropzone>
+    <main className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8">
+      <ReplaceContentDialog
+        open={confirmOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            confirmActionRef.current = null;
+          }
+          setConfirmOpen(open);
+        }}
+        onCancel={handleCancelReplace}
+        onConfirm={handleConfirmReplace}
+      />
 
-          <Dropzone
-            accept={{ 'text/plain': ['.cue'] }}
-            disabled={isBusy}
-            maxFiles={1}
-            onDrop={(files) => setCueFile(files[0] ?? null)}
-            progress={cueProgress}
-            src={cueFile ? [cueFile] : undefined}
-          >
-            <DropzoneEmptyState />
-            <DropzoneContent />
-          </Dropzone>
+      <TrackWaveform
+        ref={trackWaveformRef}
+        playerUrl={playerUrl}
+        isBusy={isBusy}
+        audioFile={audioFile}
+        audioProgress={audioProgress}
+        onLocalAudioDrop={handleLocalAudioDrop}
+        onPlayerDuration={setDurationMs}
+        onPlayerProgress={setCurrentMs}
+        currentMs={currentMs}
+        durationMs={durationMs}
+        formatTime={formatTimeLabel}
+      />
 
-          {error && (
-            <div className="md:col-span-2 flex items-center gap-2 rounded-md bg-destructive/10 p-3 text-destructive">
-              <AlertTriangle className="size-4" />
-              <p className="text-sm">{error}</p>
-            </div>
-          )}
+      <TracklistEditor
+        isBusy={isBusy}
+        currentMs={currentMs}
+        formatTime={formatTimeLabel}
+        cueFile={cueFile}
+        cueProgress={cueProgress}
+        onCueDrop={handleCueDrop}
+        tracks={tracks}
+        activeTrack={activeTrack}
+        trackProgressPercent={trackProgressPercent}
+        onRequestSeek={handleTrackSeek}
+        onUpdateTrack={updateTrack}
+        onRemoveTrack={removeTrack}
+        onAddTrack={addTrack}
+        overallDetails={overallDetails}
+        onUpdateOverall={updateOverallDetails}
+        artworkFile={artworkFile}
+        artworkProgress={artworkProgress}
+        onArtworkDrop={handleArtworkDrop}
+      />
 
-          <div className="md:col-span-2 flex flex-wrap items-center justify-between gap-3">
-            <div className="text-sm text-muted-foreground">
-              {jobId ? `Ready to start job ${jobId}` : 'We will name your uploads source.m4a/source.cue under the job prefix.'}
-            </div>
-            {cueValid === true ? (
-              <div className="flex items-center gap-2 rounded-md bg-emerald-50 px-3 py-2 text-emerald-700 text-sm">
-                <CheckCircle2 className="size-4" />
-                CUE sheet valid
-              </div>
-            ): cueValid === false ? (
-              <div className="flex items-center gap-2 rounded-md bg-destructive/10 px-3 py-2 text-destructive text-sm">
-                <AlertTriangle className="size-4" />
-                CUE sheet invalid
-              </div>
-            ) : <></>}
-            <Button disabled={actionDisabled} onClick={onAction} size="lg">
-              {isBusy ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : stage === 'uploaded' ? (
-                <Scissors className="size-4" />
-              ) : (
-                <Upload className="size-4" />
-              )}
-              {actionLabel}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <ConfirmUpload
+        jobId={jobId}
+        isBusy={isBusy}
+        actionDisabled={actionDisabled}
+        actionLabel={actionLabel}
+        onAction={onAction}
+      />
+
+      {error && (
+        <div className="flex items-center gap-2 rounded-md bg-destructive/10 p-3 text-destructive">
+          <AlertTriangle className="size-4" />
+          <p className="text-sm">{error}</p>
+        </div>
+      )}
     </main>
   );
+}
+
+function useThrottledValue<T>(value: T, intervalMs: number): T {
+  const [throttledValue, setThrottledValue] = useState(value);
+  const lastUpdatedRef = useRef<number>(Date.now());
+  const timeoutRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const now = Date.now();
+    const elapsed = now - lastUpdatedRef.current;
+
+    if (elapsed >= intervalMs) {
+      lastUpdatedRef.current = now;
+      setThrottledValue(value);
+      return () => {
+        if (timeoutRef.current) {
+          window.clearTimeout(timeoutRef.current);
+          timeoutRef.current = null;
+        }
+      };
+    }
+
+    const remaining = intervalMs - elapsed;
+    timeoutRef.current = window.setTimeout(() => {
+      lastUpdatedRef.current = Date.now();
+      setThrottledValue(value);
+      timeoutRef.current = null;
+    }, remaining);
+
+    return () => {
+      if (timeoutRef.current) {
+        window.clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+    };
+  }, [value, intervalMs]);
+
+  return throttledValue;
 }
