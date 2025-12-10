@@ -1,10 +1,10 @@
 'use client';
 
 import { ConfirmUpload } from '@/components/confirm-upload';
-import { SelectSource, SourceType } from '@/components/select-source';
 import { TracklistEditor, type CueTrackEntry, type OverallDetails } from '@/components/tracklist-editor';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { retryWithBackoff } from '@/lib/retry-utils';
+import { uploadToPresigned } from '@/lib/upload-utils';
 import { Stage } from '@/types/jobs';
 import { parseCue, validateCue } from '@mixcut/parser';
 import type { CreateJobResponse } from '@mixcut/shared';
@@ -21,47 +21,8 @@ const emptyOverallDetails: OverallDetails = {
   releaseYear: '',
 };
 
-async function uploadToPresigned(
-  url: string,
-  file: File,
-  fallbackType: string,
-  onProgress?: (percent: number) => void,
-) {
-  const contentType = file.type || fallbackType;
-
-  const attemptUpload = () =>
-    new Promise<void>((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.open('PUT', url);
-      xhr.setRequestHeader('Content-Type', contentType);
-
-      xhr.upload.onprogress = (event) => {
-        if (event.lengthComputable && onProgress) {
-          const percent = Math.round((event.loaded / event.total) * 100);
-          onProgress(percent);
-        }
-      };
-
-      xhr.onerror = () => reject(new Error('Network error uploading file'));
-      xhr.onload = () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          if (onProgress) onProgress(100);
-          resolve();
-        } else {
-          reject(new Error(`Upload failed with status ${xhr.status}`));
-        }
-      };
-
-      xhr.send(file);
-    });
-
-  await retryWithBackoff(attemptUpload);
-}
-
 export default function UploadPage() {
   const router = useRouter();
-  const [sourceType, setSourceType] = useState<SourceType>('local');
-  const [sourceUrl, setSourceUrl] = useState<string>('');
   const [playerUrl, setPlayerUrl] = useState<string | undefined>(undefined);
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [cueFile, setCueFile] = useState<File | null>(null);
@@ -147,16 +108,9 @@ export default function UploadPage() {
       setPlayerUrl(url);
       return () => URL.revokeObjectURL(url);
     }
+    setPlayerUrl('');
     return undefined;
   }, [audioFile]);
-
-  useEffect(() => {
-    if (sourceType !== 'local') {
-      setPlayerUrl(sourceUrl);
-    } else if (!audioFile) {
-      setPlayerUrl('');
-    }
-  }, [sourceType, sourceUrl, audioFile]);
 
   const updateOverallDetails = useCallback((patch: Partial<OverallDetails>) => {
     setOverallDetails((prev) => ({ ...prev, ...patch }));
@@ -169,13 +123,79 @@ export default function UploadPage() {
     setArtworkProgress(null);
   }, []);
 
+  const generateCueFile = useCallback(
+    (entries: CueTrackEntry[]) => {
+      if (!entries.length) {
+        return null;
+      }
+
+      const escapeCueValue = (value: string) => value.replace(/"/g, '\\"');
+      const formatIndex = (ms: number) => {
+        const framesPerSecond = 75;
+        const totalFrames = Math.max(0, Math.round((ms / 1000) * framesPerSecond));
+        const minutes = Math.floor(totalFrames / (framesPerSecond * 60));
+        const remainingFrames = totalFrames - minutes * framesPerSecond * 60;
+        const seconds = Math.floor(remainingFrames / framesPerSecond);
+        const frames = remainingFrames - seconds * framesPerSecond;
+        const mm = minutes.toString().padStart(2, '0');
+        const ss = seconds.toString().padStart(2, '0');
+        const ff = frames.toString().padStart(2, '0');
+        return `${mm}:${ss}:${ff}`;
+      };
+
+      const lines: string[] = [];
+      const { title, performer, genre, releaseYear } = overallDetails;
+      const trimmedTitle = title.trim();
+      const trimmedPerformer = performer.trim();
+      const trimmedGenre = genre.trim();
+      const trimmedReleaseYear = releaseYear.trim();
+
+      if (trimmedTitle) {
+        lines.push(`TITLE "${escapeCueValue(trimmedTitle)}"`);
+      }
+      if (trimmedPerformer) {
+        lines.push(`PERFORMER "${escapeCueValue(trimmedPerformer)}"`);
+      }
+      if (trimmedGenre) {
+        lines.push(`REM GENRE "${escapeCueValue(trimmedGenre)}"`);
+      }
+      if (trimmedReleaseYear) {
+        lines.push(`REM DATE "${escapeCueValue(trimmedReleaseYear)}"`);
+      }
+
+      const fileLabel = audioFile?.name?.trim() || 'source.m4a';
+      lines.push(`FILE "${escapeCueValue(fileLabel)}" MP4`);
+
+      const sortedEntries = [...entries].sort((a, b) => a.trackNumber - b.trackNumber);
+      for (const track of sortedEntries) {
+        const trackTitle = track.title.trim() || `Track ${track.trackNumber}`;
+        const trackPerformer = track.performer?.trim();
+        const paddedTrackNumber = track.trackNumber.toString().padStart(2, '0');
+        lines.push(`  TRACK ${paddedTrackNumber} AUDIO`);
+        lines.push(`    TITLE "${escapeCueValue(trackTitle)}"`);
+        if (trackPerformer) {
+          lines.push(`    PERFORMER "${escapeCueValue(trackPerformer)}"`);
+        }
+        lines.push(`    INDEX 01 ${formatIndex(track.startMs)}`);
+      }
+
+      const cueContents = `${lines.join('\n')}\n`;
+      const blob = new Blob([cueContents], { type: 'text/plain' });
+      const file = new File([blob], 'source.cue', { type: 'text/plain' });
+      setCueFile(file);
+      return file;
+    },
+    [audioFile, overallDetails],
+  );
+
   const handleUpload = useCallback(async () => {
-    if (sourceType !== 'local') {
-      setError('Remote downloads will be wired soon. Use a local file for now.');
+    if (!audioFile) {
+      setError('Please select both an audio file and its matching .cue file.');
       return;
     }
 
-    if (!audioFile || !cueFile) {
+    const latestCueFile = generateCueFile(tracks) ?? cueFile;
+    if (!latestCueFile) {
       setError('Please select both an audio file and its matching .cue file.');
       return;
     }
@@ -189,9 +209,18 @@ export default function UploadPage() {
     setStage('creating');
 
     try {
+      const createJobBody =
+        artworkFile && artworkFile.type
+          ? {
+              artworkContentType: artworkFile.type,
+            }
+          : {};
+
       const response = await retryWithBackoff(() =>
         fetch(apiUrl('/jobs'), {
           method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(createJobBody),
         }),
       );
 
@@ -205,24 +234,39 @@ export default function UploadPage() {
       setStage('uploading');
       setAudioProgress(0);
       setCueProgress(0);
+      setArtworkProgress(artworkFile ? 0 : null);
 
-      await Promise.all([
+      const tasks: Promise<unknown>[] = [
+        uploadToPresigned(payload.uploadUrls.cue, latestCueFile, 'text/plain', setCueProgress),
         uploadToPresigned(payload.uploadUrls.audio, audioFile, 'audio/mp4', setAudioProgress),
-        uploadToPresigned(payload.uploadUrls.cue, cueFile, 'text/plain', setCueProgress),
-      ]);
+      ];
+
+      if (artworkFile) {
+        const artworkUrl = payload.uploadUrls.artwork;
+        if (!artworkUrl) {
+          throw new Error('Server did not return an artwork upload URL.');
+        }
+        tasks.push(uploadToPresigned(artworkUrl, artworkFile, 'image/png', setArtworkProgress));
+      }
+
+      await Promise.all(tasks);
 
       setStage('uploaded');
       setAudioProgress(100);
       setCueProgress(100);
+      if (artworkFile) {
+        setArtworkProgress(100);
+      }
     } catch (err: unknown) {
       console.error(err);
       const message = err instanceof Error ? err.message : 'Upload failed';
       setError(message);
       setAudioProgress(null);
       setCueProgress(null);
+      setArtworkProgress(null);
       setStage('idle');
     }
-  }, [audioFile, cueFile, cueValid, sourceType]);
+  }, [audioFile, artworkFile, cueFile, cueValid, generateCueFile, tracks]);
 
   const handleStart = useCallback(async () => {
     if (!jobId) return;
@@ -263,10 +307,8 @@ export default function UploadPage() {
       return !jobId || isBusy;
     }
 
-    return sourceType === 'local'
-      ? !audioFile || !cueFile || isBusy
-      : isBusy; // remote flow will be enabled later
-  }, [audioFile, cueFile, jobId, isBusy, stage, sourceType]);
+    return !audioFile || !cueFile || isBusy;
+  }, [audioFile, cueFile, jobId, isBusy, stage]);
 
   const onAction = stage === 'uploaded' ? handleStart : handleUpload;
 
@@ -296,11 +338,9 @@ export default function UploadPage() {
         }
       };
 
-      requestChangeConfirmation(() => {
-        void execute();
-      });
+      void execute();
     },
-    [requestChangeConfirmation, resetCueContent],
+    [resetCueContent],
   );
 
   const sortedTracks = useMemo(
@@ -376,23 +416,6 @@ export default function UploadPage() {
     return Math.min(100, ((clamped - startMs) / (windowEnd - startMs)) * 100);
   };
 
-  const handleSourceSelect = useCallback(
-    (type: SourceType) => {
-      if (type === sourceType) return;
-      requestChangeConfirmation(() => {
-        resetCueContent();
-        setSourceType(type);
-        setError(null);
-        setAudioFile(null);
-        setSourceUrl('');
-        setPlayerUrl(undefined);
-        setCurrentMs(0);
-        setDurationMs(0);
-      });
-    },
-    [requestChangeConfirmation, resetCueContent, sourceType],
-  );
-
   const handleLocalAudioDrop = useCallback(
     (files: File[]) => {
       const next = files[0];
@@ -400,23 +423,13 @@ export default function UploadPage() {
 
       requestChangeConfirmation(() => {
         resetCueContent();
-        setSourceType('local');
         setAudioFile(next);
-        setSourceUrl('');
+        setPlayerUrl(undefined);
+        setCurrentMs(0);
+        setDurationMs(0);
       });
     },
     [requestChangeConfirmation, resetCueContent],
-  );
-
-  const handleSourceUrlChange = useCallback(
-    (value: string) => {
-      if (value === sourceUrl) return;
-      requestChangeConfirmation(() => {
-        resetCueContent();
-        setSourceUrl(value);
-      });
-    },
-    [requestChangeConfirmation, resetCueContent, sourceUrl],
   );
 
   const handleConfirmReplace = useCallback(() => {
@@ -444,10 +457,10 @@ export default function UploadPage() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Replace current source?</AlertDialogTitle>
+            <AlertDialogTitle>Replace current files?</AlertDialogTitle>
             <AlertDialogDescription>
-              Changing the source will clear the uploaded cue sheet, track list, and overall details. This action
-              cannot be undone.
+              Replacing the audio or cue file will clear the uploaded cue sheet, track list, and overall details. This
+              action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -457,12 +470,7 @@ export default function UploadPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <SelectSource sourceType={sourceType} isBusy={isBusy} onSelect={handleSourceSelect} />
-
       <TracklistEditor
-        sourceType={sourceType}
-        sourceUrl={sourceUrl}
-        onSourceUrlChange={handleSourceUrlChange}
         playerUrl={playerUrl}
         isBusy={isBusy}
         audioFile={audioFile}
@@ -490,9 +498,7 @@ export default function UploadPage() {
       />
 
       <ConfirmUpload
-        sourceType={sourceType}
         jobId={jobId}
-        cueValid={cueValid}
         isBusy={isBusy}
         actionDisabled={actionDisabled}
         actionLabel={actionLabel}

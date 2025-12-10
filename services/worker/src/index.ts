@@ -59,6 +59,8 @@ async function handleRecord(record: SQSRecord) {
       .filter((p) => p.endsWith(".m4a") && !p.endsWith("source.m4a"))
       .sort(); // rely on m4acut naming order (usually track order)
 
+    // todo: use [AtomicParsley](https://github.com/wez/atomicparsley) to write associated artwork metadata
+
     // 6) Load existing tracks for job from Supabase
     const { data: tracks, error: tracksErr } = await supabase
       .from("job_tracks")

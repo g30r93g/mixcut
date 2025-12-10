@@ -22,9 +22,7 @@ import {
 } from '@/components/ui/shadcn-io/dropzone';
 import { EllipsisVertical, FilePenLine, Plus, Upload } from 'lucide-react';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import type { DropEvent, FileRejection } from 'react-dropzone';
 import ReactPlayer from 'react-player';
-import type { SourceType } from './select-source';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import { Badge } from './ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
@@ -44,9 +42,6 @@ export type OverallDetails = {
 };
 
 type TracklistEditorProps = {
-    sourceType: SourceType;
-    sourceUrl: string;
-    onSourceUrlChange: (value: string) => void;
     playerUrl: string | undefined;
     isBusy: boolean;
     audioFile: File | null;
@@ -74,9 +69,6 @@ type TracklistEditorProps = {
 };
 
 export function TracklistEditor({
-    sourceType,
-    sourceUrl,
-    onSourceUrlChange,
     playerUrl,
     isBusy,
     audioFile,
@@ -142,16 +134,13 @@ export function TracklistEditor({
         onUpdateOverall({ [field]: value });
     };
 
-    const handleCueDropInternal = (
-        acceptedFiles: File[],
-        _fileRejections: FileRejection[],
-        _event: DropEvent
-    ) => {
-        if (acceptedFiles.length > 0) {
-            onCueDrop(acceptedFiles);
-            setCueDialogOpen(false);
+    const handleCueDropInternal = useCallback((acceptedFiles: File[]) => {
+        if (acceptedFiles.length === 0) {
+            return;
         }
-    };
+        onCueDrop(acceptedFiles);
+        setCueDialogOpen(false);
+    }, [onCueDrop]);
 
     return (
         <Card>
@@ -191,31 +180,17 @@ export function TracklistEditor({
             </div>
             <CardContent className="grid gap-6 md:grid-cols-2 max-h-[75vh]">
                 <div className="flex flex-col gap-4">
-                    {sourceType !== 'local' && (
-                        <div className="space-y-2">
-                            <Label htmlFor="sourceUrl">Source URL</Label>
-                            <Input
-                                id="sourceUrl"
-                                placeholder={sourceType === 'youtube' ? 'https://youtu.be/...' : 'https://soundcloud.com/...'}
-                                value={sourceUrl}
-                                onChange={(e) => onSourceUrlChange(e.target.value)}
-                            />
-                        </div>
-                    )}
-
-                    {sourceType === 'local' && (
-                        <Dropzone
-                            accept={{ 'audio/m4a': ['.m4a'] }}
-                            disabled={isBusy}
-                            maxFiles={1}
-                            onDrop={onLocalAudioDrop}
-                            progress={audioProgress}
-                            src={audioFile ? [audioFile] : undefined}
-                        >
-                            <DropzoneEmptyState />
-                            <DropzoneContent />
-                        </Dropzone>
-                    )}
+                    <Dropzone
+                        accept={{ 'audio/m4a': ['.m4a'] }}
+                        disabled={isBusy}
+                        maxFiles={1}
+                        onDrop={onLocalAudioDrop}
+                        progress={audioProgress}
+                        src={audioFile ? [audioFile] : undefined}
+                    >
+                        <DropzoneEmptyState />
+                        <DropzoneContent />
+                    </Dropzone>
 
                     <div className="overflow-hidden rounded-md border bg-muted">
                         <ReactPlayer

@@ -1,4 +1,4 @@
-import { gatewayUrl, buildGatewayHeaders } from '@/lib/gateway-client';
+import { buildGatewayHeaders, gatewayUrl } from '@/lib/gateway-client';
 import { retryWithBackoff } from '@/lib/retry-utils';
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
@@ -18,16 +18,17 @@ async function requireUserId() {
 }
 
 export async function POST() {
-  const userId = await requireUserId();
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  // todo: implement
+  // const userId = await requireUserId();
+  // if (!userId) {
+  //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  // }
 
   try {
     const response = await retryWithBackoff(() =>
       fetch(gatewayUrl('/jobs'), {
         method: 'POST',
-        headers: buildGatewayHeaders(userId),
+        headers: buildGatewayHeaders(),
       }),
     );
 

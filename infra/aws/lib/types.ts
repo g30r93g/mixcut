@@ -10,10 +10,6 @@ export interface AwsEnvStackProps extends StackProps {
 
 export interface StorageStackProps extends StackProps {}
 
-export interface DownloaderStackProps extends AwsEnvStackProps {
-  audioDownloadsBucket: IBucket;
-}
-
 export interface WorkerStackProps extends AwsEnvStackProps {
   uploadsBucket: IBucket;
   outputsBucket: IBucket;
