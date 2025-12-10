@@ -1,13 +1,15 @@
 const gatewayEnv = process.env.GATEWAY_URL ?? process.env.NEXT_PUBLIC_GATEWAY_URL;
+const gatewayBase = gatewayEnv?.replace(/\/$/, '');
 
-if (!gatewayEnv) {
-  throw new Error('GATEWAY_URL (or NEXT_PUBLIC_GATEWAY_URL) is required for gateway calls');
+function requireGatewayBase() {
+  if (!gatewayBase) {
+    throw new Error('GATEWAY_URL (or NEXT_PUBLIC_GATEWAY_URL) is required for gateway calls');
+  }
+  return gatewayBase;
 }
 
-const gatewayBase = gatewayEnv.replace(/\/$/, '');
-
 export function gatewayUrl(path: string) {
-  return `${gatewayBase}${path}`;
+  return `${requireGatewayBase()}${path}`;
 }
 
 export function buildGatewayHeaders(userId?: string, extra?: HeadersInit) {
