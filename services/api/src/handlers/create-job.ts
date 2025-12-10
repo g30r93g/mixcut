@@ -54,6 +54,8 @@ export async function handleCreateJob(
       status: "PENDING_UPLOAD",
       audio_bucket: UPLOADS_BUCKET,
       audio_key: audioKey,
+      artwork_bucket: UPLOADS_BUCKET,
+      artwork_key: artworkKey,
       cue_bucket: UPLOADS_BUCKET,
       cue_key: cueKey
     });

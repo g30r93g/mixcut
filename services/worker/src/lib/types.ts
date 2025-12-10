@@ -1,11 +1,3 @@
-export interface WorkerMessage {
-  jobId: string;
-  audioBucket: string;
-  audioKey: string;
-  cueBucket: string;
-  cueKey: string;
-}
-
 export interface JobRow {
   id: string;
   status: string;

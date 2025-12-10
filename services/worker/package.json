@@ -9,7 +9,8 @@
     },
     "dependencies": {
         "@aws-sdk/client-s3": "^3.600.0",
-        "@supabase/supabase-js": "^2.45.0"
+        "@supabase/supabase-js": "^2.45.0",
+        "@mixcut/shared": "workspace:*"
     },
     "devDependencies": {
         "@types/aws-lambda": "^8.10.145",

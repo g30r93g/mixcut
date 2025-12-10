@@ -236,6 +236,16 @@ export default function UploadPage() {
       setCueProgress(0);
       setArtworkProgress(artworkFile ? 0 : null);
 
+      // Todo: remove duplication but prevent promise.all from executing server was supposed to return an artwork upload URL
+      if (artworkFile) {
+        const artworkUrl = payload.uploadUrls.artwork;
+        if (!artworkUrl) {
+          throw new Error('Server did not return an artwork upload URL.');
+        }
+      }
+
+      console.log('cue', await latestCueFile.text());
+
       const tasks: Promise<unknown>[] = [
         uploadToPresigned(payload.uploadUrls.cue, latestCueFile, 'text/plain', setCueProgress),
         uploadToPresigned(payload.uploadUrls.audio, audioFile, 'audio/mp4', setAudioProgress),

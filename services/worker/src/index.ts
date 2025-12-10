@@ -4,9 +4,11 @@ import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import { promisify } from "node:util";
 
+import type { WorkerMessage } from "@mixcut/shared";
+
 import { downloadToFile, listFiles, uploadFile } from "./lib/fs-utils";
 import { supabase } from "./lib/supabase";
-import { JobTrackRow, WorkerMessage } from "./lib/types";
+import { JobTrackRow } from "./lib/types";
 
 const execFileAsync = promisify(execFile);
 
@@ -25,7 +27,7 @@ export const handler = async (event: SQSEvent) => {
 async function handleRecord(record: SQSRecord) {
   const msg: WorkerMessage = JSON.parse(record.body);
 
-  const { jobId, audioBucket, audioKey, cueBucket, cueKey } = msg;
+  const { jobId, audioBucket, audioKey, artworkBucket, artworkKey, cueBucket, cueKey } = msg;
 
   try {
     // 1) Mark job PROCESSING
@@ -59,7 +61,14 @@ async function handleRecord(record: SQSRecord) {
       .filter((p) => p.endsWith(".m4a") && !p.endsWith("source.m4a"))
       .sort(); // rely on m4acut naming order (usually track order)
 
-    // todo: use [AtomicParsley](https://github.com/wez/atomicparsley) to write associated artwork metadata
+
+    if (artworkBucket && artworkKey) {
+      const artworkPath = await downloadArtworkForJob(artworkBucket, artworkKey, workDir);
+
+      if (artworkPath) {
+        await applyArtworkToFiles(outputFiles, artworkPath);
+      }
+    }
 
     // 6) Load existing tracks for job from Supabase
     const { data: tracks, error: tracksErr } = await supabase
@@ -135,4 +144,48 @@ async function updateJob(jobId: string, patch: Record<string, any>) {
   if (error) {
     throw error;
   }
+}
+
+const ARTWORK_FILENAMES = ["artwork.png", "artwork.jpg", "artwork.jpeg"];
+
+async function downloadArtworkForJob(
+  bucket: string,
+  audioKey: string,
+  workDir: string
+): Promise<string | null> {
+  const prefix = path.posix.dirname(audioKey);
+
+  for (const filename of ARTWORK_FILENAMES) {
+    const key = prefix && prefix !== "." ? `${prefix}/${filename}` : filename;
+    const localPath = path.join(workDir, filename);
+
+    try {
+      await downloadToFile(bucket, key, localPath);
+      return localPath;
+    } catch (err: any) {
+      if (isNotFoundError(err)) {
+        continue;
+      }
+      throw err;
+    }
+  }
+
+  return null;
+}
+
+async function applyArtworkToFiles(filePaths: string[], artworkPath: string) {
+  for (const filePath of filePaths) {
+    await execFileAsync("AtomicParsley", [filePath, "--artwork", artworkPath, "--overWrite"], {
+      cwd: path.dirname(filePath)
+    });
+  }
+}
+
+function isNotFoundError(err: any): boolean {
+  if (!err) return false;
+  if (err.$metadata?.httpStatusCode === 404) {
+    return true;
+  }
+  const code = err.Code ?? err.code ?? err.name;
+  return code === "NoSuchKey" || code === "NotFound";
 }

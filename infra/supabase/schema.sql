@@ -12,6 +12,8 @@ create table public.jobs (
   )),
   audio_bucket text not null,
   audio_key text not null,
+  artwork_bucket text,
+  artwork_key text,
   cue_bucket text not null,
   cue_key text not null,
   output_bucket text,
