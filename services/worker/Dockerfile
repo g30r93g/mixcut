@@ -50,6 +50,7 @@ WORKDIR /tmp/build
 
 # Bring in package sources (build context is services/worker)
 COPY package.json tsconfig.json ./
+COPY vendor ./vendor
 COPY src ./src
 
 # Install deps, build, then prune to prod-only.
