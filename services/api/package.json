@@ -12,7 +12,7 @@
     "@aws-sdk/client-s3": "^3.600.0",
     "@aws-sdk/s3-request-presigner": "^3.600.0",
     "@aws-sdk/client-lambda": "^3.600.0",
-    "@supabase/supabase-js": "^2.45.0",
+    "@supabase/supabase-js": "^2.87.1",
     "jszip": "^3.10.1",
     "@mixcut/shared": "workspace:*"
   },
