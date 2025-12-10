@@ -174,9 +174,9 @@ export const TrackWaveform = forwardRef<TrackWaveformHandle, TrackWaveformProps>
         useEffect(() => {
             minPxPerSecRef.current = minPxPerSec;
             const instance = wavesurferRef.current;
-            if (!instance || !hasAudio) return;
+            if (!instance || !hasAudio || !isReady) return;
             instance.zoom(minPxPerSec);
-        }, [minPxPerSec, hasAudio]);
+        }, [minPxPerSec, hasAudio, isReady]);
 
         const handleZoomChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
             setMinPxPerSec(Number(event.target.value));
