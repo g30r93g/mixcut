@@ -121,7 +121,6 @@ export function TracklistEditor({
                             disabled={isBusy}
                             maxFiles={1}
                             onDrop={handleCueDropInternal}
-                            progress={cueProgress}
                             src={cueFile ? [cueFile] : undefined}
                         >
                             <DropzoneEmptyState />
@@ -182,7 +181,6 @@ export function TracklistEditor({
                                 disabled={isBusy}
                                 maxFiles={1}
                                 onDrop={onArtworkDrop}
-                                progress={artworkProgress}
                                 src={artworkFile ? [artworkFile] : undefined}
                             >
                                 <DropzoneEmptyState />

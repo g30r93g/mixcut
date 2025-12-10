@@ -209,7 +209,6 @@ export const TrackWaveform = forwardRef<TrackWaveformHandle, TrackWaveformProps>
                                 disabled={isBusy}
                                 maxFiles={1}
                                 onDrop={onLocalAudioDrop}
-                                progress={audioProgress}
                                 src={audioFile ? [audioFile] : undefined}
                             >
                                 <DropzoneEmptyState />

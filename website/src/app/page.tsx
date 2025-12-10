@@ -298,6 +298,9 @@ export default function UploadPage() {
         actionDisabled={actionDisabled}
         actionLabel={actionLabel}
         onAction={onAction}
+        audioProgress={audioProgress}
+        artworkProgress={artworkProgress}
+        cueProgress={cueProgress}
       />
 
       {error && (
