@@ -51,10 +51,6 @@ jobs:
         working-directory: website
         run: pnpm build
 
-      - name: Build worker package
-        working-directory: services/worker
-        run: pnpm build
-
       - name: Cache Docker layers
         id: worker-buildx-cache
         uses: actions/cache@v4
