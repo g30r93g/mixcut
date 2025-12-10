@@ -1,7 +1,7 @@
 # services/worker/Dockerfile
 
-# Build L-SMASH and m4acut
-FROM amazonlinux:2 AS build
+# Stage 1: build and package the native audio tooling we need (m4acut + AtomicParsley)
+FROM amazonlinux:2 AS tools-build
 
 ENV INSTALL_ROOT=/opt/m4acut
 
@@ -20,7 +20,7 @@ RUN git clone --depth 1 --branch ${LSMASH_VERSION} https://github.com/l-smash/l-
     make install && \
     make install DESTDIR=${INSTALL_ROOT}
 
-# Build m4acut following upstream instructions
+# Build m4acut
 RUN git clone https://github.com/nu774/m4acut.git && \
     cd m4acut && \
     autoreconf -i && \
@@ -38,35 +38,25 @@ RUN curl -L -o AtomicParsleyLinux.zip https://github.com/wez/atomicparsley/relea
     install -m 0755 AtomicParsley ${INSTALL_ROOT}/usr/local/bin/AtomicParsley && \
     rm -f AtomicParsley AtomicParsleyLinux.zip
 
-# Lambda runtime with Node
+
 FROM public.ecr.aws/lambda/nodejs:22
 
-# Copy m4acut
-COPY --from=build /opt/m4acut /opt/m4acut
-ENV PATH="/opt/m4acut/usr/local/bin:${PATH}"
+# Bring the native tooling compiled in the first stage into the runtime layer
+COPY --from=tools-build /usr/local/ /usr/local/
 
-# Build the worker code inside the image
-WORKDIR /repo
-ENV CI=true
+COPY package.json tsconfig.json ./
+COPY src ./src
 
-# Copy only the files needed for the worker + shared workspace packages
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
-COPY shared ./shared
-COPY services/worker ./services/worker
-
-# Install the minimal workspace graph, build shared first, then the worker,
-# and finally prune the worker package down to prod dependencies. The filter
-# keeps us from building the entire monorepo inside the image.
-RUN corepack enable && \
-    pnpm install --frozen-lockfile --filter "@mixcut/shared..." --filter "@mixcut/worker..." && \
-    pnpm --filter "@mixcut/shared" run build && \
-    pnpm --filter "@mixcut/worker" run build && \
-    cd services/worker && pnpm prune --prod && \
-    cp -r dist/. . && rm -rf dist
+# Install deps, build, then prune to prod-only.
+# Flatten dist into /tmp/build so index.js sits at project root
+RUN corepack enable && pnpm install --no-frozen-lockfile && pnpm run build && pnpm prune --prod && \
+    cp -r dist/. . && rm -rf dist && \
+    mkdir -p /tmp/build && \
+    cp -r . /tmp/build
 
 # Move built artifacts into Lambda task root
 WORKDIR ${LAMBDA_TASK_ROOT}
-RUN cp -r /repo/services/worker/. . && \
+RUN cp -r /tmp/build/. . && \
     rm -rf ./src
 
 CMD [ "index.handler" ]

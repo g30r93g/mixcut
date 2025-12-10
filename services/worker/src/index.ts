@@ -4,11 +4,9 @@ import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import { promisify } from "node:util";
 
-import type { WorkerMessage } from "@mixcut/shared";
-
 import { downloadToFile, listFiles, uploadFile } from "./lib/fs-utils";
 import { supabase } from "./lib/supabase";
-import { JobTrackRow } from "./lib/types";
+import { JobTrackRow, WorkerMessage } from "./lib/types";
 
 const execFileAsync = promisify(execFile);
 

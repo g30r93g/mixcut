@@ -11,9 +11,7 @@
     "infra:diff": "pnpm -F @mixcut/aws-infra cdk diff",
     "infra:synth": "pnpm -F @mixcut/aws-infra cdk synth",
 
-    "shared:pack": "pnpm -F @mixcut/shared pack --pack-destination services/worker/vendor",
-
-    "worker:bundle": "pnpm run shared:pack && docker build --platform linux/amd64 -f services/worker/Dockerfile .",
+    "worker:bundle": "pnpm -F worker build && docker build --platform linux/amd64 services/worker",
     "validator:bundle": "pnpm -F validator build",
 
     "website:build": "pnpm -F website build",

@@ -90,9 +90,8 @@ export class WorkerStack extends cdk.Stack {
 
     const workerFn = new DockerImageFunction(this, "WorkerFunction", {
       code: DockerImageCode.fromImageAsset(
-        join(__dirname, "..", "..", "..", ".."),
+        join(__dirname, "..", "..", "..", "..", 'services', 'worker'),
         {
-          file: "services/worker/Dockerfile",
           platform: cdk.aws_ecr_assets.Platform.LINUX_AMD64
         }
       ),
