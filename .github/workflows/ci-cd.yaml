@@ -60,7 +60,7 @@ jobs:
             ${{ runner.os }}-nextjs-
 
       - name: Build workspace packages
-        run: pnpm build
+        run: pnpm build:no-docker
 
       - name: Build worker Docker image
         uses: docker/build-push-action@v6
