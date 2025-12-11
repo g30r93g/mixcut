@@ -123,9 +123,6 @@ importers:
       '@aws-sdk/client-s3':
         specifier: ^3.600.0
         version: 3.932.0
-      '@mixcut/shared':
-        specifier: workspace:*
-        version: link:../../shared
       '@supabase/supabase-js':
         specifier: ^2.87.1
         version: 2.87.1
