@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "build": "pnpm run -r build && pnpm worker:bundle",
+    "build:no-docker": "pnpm run -r build",
     "lint": "pnpm run -r lint",
     "test": "pnpm run -r test",
     "format": "prettier --write \"**/*.{cjs,js,mjs,ts,tsx,jsx,json,md,css,scss,html}\"",
