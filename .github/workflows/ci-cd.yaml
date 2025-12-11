@@ -59,6 +59,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nextjs-
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker-container
+
       - name: Build workspace packages
         run: pnpm build:no-docker
 
