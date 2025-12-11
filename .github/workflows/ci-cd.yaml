@@ -60,7 +60,7 @@ jobs:
             ${{ runner.os }}-nextjs-
 
       - name: Build workspace packages
-        run: pnpm -r --filter "./services/api|./services/validator|./website" build --workspace-concurrency 3
+        run: pnpm build
 
       - name: Build worker Docker image
         uses: docker/build-push-action@v6
