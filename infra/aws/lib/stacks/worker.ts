@@ -76,6 +76,13 @@ export class WorkerStack extends cdk.Stack {
     const workerFn = new DockerImageFunction(this, 'WorkerFunction', {
       code: DockerImageCode.fromImageAsset(join(__dirname, '..', '..', '..', '..', 'services', 'worker'), {
         platform: cdk.aws_ecr_assets.Platform.LINUX_AMD64,
+        ...(process.env.CI
+          ? {
+              cacheFrom: [{ type: 'gha', params: { scope: 'worker-lambda' } }],
+              cacheTo: { type: 'gha', params: { mode: 'max', scope: 'worker-lambda' } },
+              outputs: ['type=docker'],
+            }
+          : {}),
       }),
       timeout: cdk.Duration.minutes(15),
       memorySize: 2048,
