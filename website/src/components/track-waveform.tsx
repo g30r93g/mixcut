@@ -23,7 +23,7 @@ export type TrackWaveformHandle = {
     seekTo: (ms: number) => void;
 };
 
-type TrackWaveformProps = {
+export type TrackWaveformProps = {
     playerUrl: string | undefined;
     isBusy: boolean;
     audioFile: File | null;
@@ -197,12 +197,12 @@ export const TrackWaveform = forwardRef<TrackWaveformHandle, TrackWaveformProps>
                     <Dialog open={trackUploadDialogOpen} onOpenChange={setTrackUploadDialogOpen}>
                         <DialogTrigger asChild>
                             <Button className="w-fit mr-6">
-                                <Upload /> Upload Track
+                                <Upload /> Change Track
                             </Button>
                         </DialogTrigger>
                         <DialogContent>
                             <DialogHeader>
-                                <DialogTitle>Upload your audio</DialogTitle>
+                                <DialogTitle>Change Track</DialogTitle>
                             </DialogHeader>
                             <Dropzone
                                 accept={{ 'audio/m4a': ['.m4a'] }}

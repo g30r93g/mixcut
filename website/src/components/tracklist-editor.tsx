@@ -35,7 +35,7 @@ export type OverallDetails = {
     releaseYear: string;
 };
 
-type TracklistEditorProps = {
+export type TracklistEditorProps = {
     isBusy: boolean;
     currentMs: number;
     formatTime: (ms: number) => string;

@@ -1,1 +1,1 @@
-export type Stage = 'idle' | 'creating' | 'uploading' | 'uploaded' | 'starting';
+export type Stage = 'idle' | 'creating' | 'uploading' | 'uploaded' | 'starting' | 'started';

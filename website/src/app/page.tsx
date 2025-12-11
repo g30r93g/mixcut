@@ -2,20 +2,41 @@
 
 import { ConfirmUpload } from '@/components/confirm-upload';
 import { ReplaceContentDialog } from '@/components/replace-content-dialog';
-import { TrackWaveform, type TrackWaveformHandle } from '@/components/track-waveform';
-import { TracklistEditor, type CueTrackEntry, type OverallDetails } from '@/components/tracklist-editor';
+import type { TrackWaveformHandle } from '@/components/track-waveform';
+import { TrackWorkspace } from '@/components/track-workspace';
+import type { CueTrackEntry, OverallDetails } from '@/components/tracklist-editor';
+import { TracksDownload } from '@/components/tracks-download';
+import { UploadTrackCard } from '@/components/upload-track-card';
+import { WorkflowStepHeader } from '@/components/workflow-step-header';
 import { buildCueFile, emptyOverallDetails } from '@/lib/cue-helpers';
 import { formatTimeLabel } from '@/lib/time';
 import { parseCue } from '@mixcut/parser';
 import { AlertTriangle } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useCueValidation } from './hooks/useCueValidation';
 import { useObjectUrl } from './hooks/useObjectUrl';
 import { useUploadWorkflow } from './hooks/useUploadWorkflow';
 
+const workflowSteps = [
+  {
+    title: 'Upload Track',
+    description: 'Drop your source file to begin.',
+  },
+  {
+    title: 'Waveform & Tracklist',
+    description: 'Mark cues and edit metadata.',
+  },
+  {
+    title: 'Upload & Cut',
+    description: 'Send everything to Mixcut.',
+  },
+  {
+    title: 'Download Tracks',
+    description: 'Grab the finished stems.',
+  },
+];
+
 export default function UploadPage() {
-  const router = useRouter();
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [cueFile, setCueFile] = useState<File | null>(null);
   const [tracks, setTracks] = useState<CueTrackEntry[]>([]);
@@ -24,6 +45,7 @@ export default function UploadPage() {
   const [overallDetails, setOverallDetails] = useState<OverallDetails>(emptyOverallDetails);
   const [artworkFile, setArtworkFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [workspaceReady, setWorkspaceReady] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const confirmActionRef = useRef<(() => void) | null>(null);
   const trackWaveformRef = useRef<TrackWaveformHandle | null>(null);
@@ -66,7 +88,6 @@ export default function UploadPage() {
     cueValid,
     generateCueFile: generateCueFromTracks,
     setError,
-    router,
   });
 
   const resetCueContent = useCallback(() => {
@@ -76,6 +97,7 @@ export default function UploadPage() {
     setOverallDetails({ ...emptyOverallDetails });
     setArtworkFile(null);
     setArtworkProgress(null);
+    setWorkspaceReady(false);
   }, [resetCueValidation, setArtworkProgress]);
 
   const isBusy = stage === 'creating' || stage === 'uploading' || stage === 'starting';
@@ -222,6 +244,7 @@ export default function UploadPage() {
         setAudioFile(next);
         setCurrentMs(0);
         setDurationMs(0);
+        setWorkspaceReady(false);
       });
     },
     [requestChangeConfirmation, resetCueContent],
@@ -243,8 +266,21 @@ export default function UploadPage() {
     trackWaveformRef.current?.seekTo(ms);
   }, []);
 
+  const uploadInProgress =
+    stage === 'uploaded' || stage === 'creating' || stage === 'uploading' || stage === 'starting';
+  const currentStep = useMemo(() => {
+    if (stage === 'started') return 4;
+    if (uploadInProgress || workspaceReady) {
+      return 3;
+    }
+    if (audioFile) return 2;
+    return 1;
+  }, [audioFile, stage, uploadInProgress, workspaceReady]);
+
   return (
     <main className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8">
+      <WorkflowStepHeader steps={workflowSteps} currentStep={currentStep} />
+
       <ReplaceContentDialog
         open={confirmOpen}
         onOpenChange={(open) => {
@@ -257,51 +293,64 @@ export default function UploadPage() {
         onConfirm={handleConfirmReplace}
       />
 
-      <TrackWaveform
-        ref={trackWaveformRef}
-        playerUrl={playerUrl}
-        isBusy={isBusy}
-        audioFile={audioFile}
-        audioProgress={audioProgress}
-        onLocalAudioDrop={handleLocalAudioDrop}
-        onPlayerDuration={setDurationMs}
-        onPlayerProgress={setCurrentMs}
-        currentMs={currentMs}
-        durationMs={durationMs}
-        formatTime={formatTimeLabel}
-      />
+      <section className="flex flex-col gap-6">
+        {currentStep < 2 && (
+          <UploadTrackCard
+            isBusy={isBusy}
+            audioFile={audioFile}
+            onDrop={handleLocalAudioDrop}
+            progress={audioProgress}
+          />
+        )}
 
-      <TracklistEditor
-        isBusy={isBusy}
-        currentMs={currentMs}
-        formatTime={formatTimeLabel}
-        cueFile={cueFile}
-        cueProgress={cueProgress}
-        onCueDrop={handleCueDrop}
-        tracks={tracks}
-        activeTrack={activeTrack}
-        trackProgressPercent={trackProgressPercent}
-        onRequestSeek={handleTrackSeek}
-        onUpdateTrack={updateTrack}
-        onRemoveTrack={removeTrack}
-        onAddTrack={addTrack}
-        overallDetails={overallDetails}
-        onUpdateOverall={updateOverallDetails}
-        artworkFile={artworkFile}
-        artworkProgress={artworkProgress}
-        onArtworkDrop={handleArtworkDrop}
-      />
+        {currentStep === 2 && (
+        <TrackWorkspace
+          waveformRef={trackWaveformRef}
+          playerUrl={playerUrl}
+          isBusy={isBusy}
+          audioFile={audioFile}
+            audioProgress={audioProgress}
+            onLocalAudioDrop={handleLocalAudioDrop}
+            onPlayerDuration={setDurationMs}
+            onPlayerProgress={setCurrentMs}
+            currentMs={currentMs}
+            durationMs={durationMs}
+            formatTime={formatTimeLabel}
+            cueFile={cueFile}
+            cueProgress={cueProgress}
+            onCueDrop={handleCueDrop}
+            tracks={tracks}
+            activeTrack={activeTrack}
+            trackProgressPercent={trackProgressPercent}
+            onRequestSeek={handleTrackSeek}
+            onUpdateTrack={updateTrack}
+            onRemoveTrack={removeTrack}
+            onAddTrack={addTrack}
+          overallDetails={overallDetails}
+          onUpdateOverall={updateOverallDetails}
+          artworkFile={artworkFile}
+          artworkProgress={artworkProgress}
+          onArtworkDrop={handleArtworkDrop}
+          onContinue={() => setWorkspaceReady(true)}
+        />
+        )}
 
-      <ConfirmUpload
-        jobId={jobId}
-        isBusy={isBusy}
-        actionDisabled={actionDisabled}
-        actionLabel={actionLabel}
-        onAction={onAction}
-        audioProgress={audioProgress}
-        artworkProgress={artworkProgress}
-        cueProgress={cueProgress}
-      />
+        {currentStep === 3 && (
+          <ConfirmUpload
+            jobId={jobId}
+            isBusy={isBusy}
+            actionDisabled={actionDisabled}
+            actionLabel={actionLabel}
+            onAction={onAction}
+            audioProgress={audioProgress}
+            artworkProgress={artworkProgress}
+            cueProgress={cueProgress}
+            stage={stage}
+          />
+        )}
+
+        {currentStep === 4 && <TracksDownload jobId={stage === 'started' ? jobId : null} />}
+      </section>
 
       {error && (
         <div className="flex items-center gap-2 rounded-md bg-destructive/10 p-3 text-destructive">

@@ -3,7 +3,6 @@ import { retryWithBackoff } from '@/lib/retry-utils';
 import { uploadToPresigned } from '@/lib/upload-utils';
 import type { Stage } from '@/types/jobs';
 import type { CreateJobResponse } from '@mixcut/shared';
-import type { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime';
 
 const apiUrl = (path: string) => `/api${path}`;
 
@@ -14,7 +13,6 @@ type UseUploadWorkflowArgs = {
   cueValid: boolean | null;
   generateCueFile: () => File | null;
   setError: (value: string | null) => void;
-  router: AppRouterInstance;
 };
 
 export function useUploadWorkflow({
@@ -24,7 +22,6 @@ export function useUploadWorkflow({
   cueValid,
   generateCueFile,
   setError,
-  router,
 }: UseUploadWorkflowArgs) {
   const [jobId, setJobId] = useState<string | null>(null);
   const [stage, setStage] = useState<Stage>('idle');
@@ -138,18 +135,19 @@ export function useUploadWorkflow({
         throw new Error(message || 'Failed to start processing');
       }
 
-      router.push(`/job/${jobId}`);
+      setStage('started');
     } catch (err: unknown) {
       console.error(err);
       const message = err instanceof Error ? err.message : 'Failed to start processing';
       setError(message);
       setStage('uploaded');
     }
-  }, [jobId, router, setError]);
+  }, [jobId, setError]);
 
   const isBusy = stage === 'creating' || stage === 'uploading' || stage === 'starting';
 
   const actionLabel = useMemo(() => {
+    if (stage === 'started') return 'Started';
     if (stage === 'uploaded') return 'Cut';
     if (stage === 'creating') return 'Creating job…';
     if (stage === 'uploading') return 'Uploading…';
@@ -162,7 +160,7 @@ export function useUploadWorkflow({
       return !jobId || isBusy;
     }
 
-    return !audioFile || !cueFile || isBusy;
+    return stage === 'started' || !audioFile || !cueFile || isBusy;
   }, [audioFile, cueFile, isBusy, jobId, stage]);
 
   return {
