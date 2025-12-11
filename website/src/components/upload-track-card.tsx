@@ -18,7 +18,13 @@ const defaultAccept = {
   'audio/wav': ['.wav'],
 };
 
-export function UploadTrackCard({ isBusy, audioFile, onDrop, accept = defaultAccept, progress = null }: UploadTrackCardProps) {
+export function UploadTrackCard({
+  isBusy,
+  audioFile,
+  onDrop,
+  accept = defaultAccept,
+  progress = null,
+}: UploadTrackCardProps) {
   return (
     <Card>
       <CardHeader>

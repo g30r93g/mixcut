@@ -23,4 +23,3 @@ export interface JobTrackRow {
   title: string;
   output_key: string | null;
 }
-

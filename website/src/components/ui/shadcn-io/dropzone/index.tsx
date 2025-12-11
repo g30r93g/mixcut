@@ -29,18 +29,12 @@ const renderBytes = (bytes: number) => {
   return `${size.toFixed(2)}${units[unitIndex]}`;
 };
 
-const DropzoneContext = createContext<DropzoneContextType | undefined>(
-  undefined
-);
+const DropzoneContext = createContext<DropzoneContextType | undefined>(undefined);
 
 export type DropzoneProps = Omit<DropzoneOptions, 'onDrop'> & {
   src?: File[];
   className?: string;
-  onDrop?: (
-    acceptedFiles: File[],
-    fileRejections: FileRejection[],
-    event: DropEvent
-  ) => void;
+  onDrop?: (acceptedFiles: File[], fileRejections: FileRejection[], event: DropEvent) => void;
   /** Optional upload progress (0-100). When provided, a progress bar will be shown. */
   progress?: number | null;
   children?: ReactNode;
@@ -80,16 +74,13 @@ export const Dropzone = ({
   });
 
   return (
-    <DropzoneContext.Provider
-      key={JSON.stringify(src)}
-      value={{ src, accept, maxSize, minSize, maxFiles }}
-    >
+    <DropzoneContext.Provider key={JSON.stringify(src)} value={{ src, accept, maxSize, minSize, maxFiles }}>
       <Button
-      className={cn(
-        'relative h-auto w-full flex-col overflow-hidden p-8',
-        isDragActive && 'outline-none ring-1 ring-ring',
-        className
-      )}
+        className={cn(
+          'relative h-auto w-full flex-col overflow-hidden p-8',
+          isDragActive && 'ring-ring outline-none ring-1',
+          className,
+        )}
         disabled={disabled}
         type="button"
         variant="outline"
@@ -99,17 +90,17 @@ export const Dropzone = ({
         {children}
         {typeof progress === 'number' && (
           <div className="absolute inset-x-0 bottom-0">
-            <div className="flex items-center gap-2 px-3 pb-3 text-xs text-muted-foreground">
+            <div className="text-muted-foreground flex items-center gap-2 px-3 pb-3 text-xs">
               {progress >= 100 ? (
                 <CheckCircle2 className="size-4 text-emerald-600" />
               ) : (
-                <div className="h-2 w-2 animate-pulse rounded-full bg-primary" />
+                <div className="bg-primary h-2 w-2 animate-pulse rounded-full" />
               )}
               <span>{progress >= 100 ? 'Upload complete' : 'Uploading…'}</span>
             </div>
-            <div className="h-1 w-full bg-muted">
+            <div className="bg-muted h-1 w-full">
               <div
-                className="h-1 bg-primary transition-all"
+                className="bg-primary h-1 transition-all"
                 style={{ width: `${Math.min(Math.max(progress, 0), 100)}%` }}
               />
             </div>
@@ -137,15 +128,9 @@ export type DropzoneContentProps = {
 
 const maxLabelItems = 3;
 
-export const DropzoneContent = ({
-  children,
-  className,
-}: DropzoneContentProps) => {
+export const DropzoneContent = ({ children, className }: DropzoneContentProps) => {
   const { src } = useDropzoneContext();
-  const imageFile = useMemo(
-    () => src?.find((file) => file.type?.startsWith('image/')),
-    [src],
-  );
+  const imageFile = useMemo(() => src?.find((file) => file.type?.startsWith('image/')), [src]);
 
   const previewUrl = useMemo(() => {
     if (!imageFile) return null;
@@ -167,39 +152,32 @@ export const DropzoneContent = ({
 
   if (previewUrl) {
     return (
-      <div
-        className={cn(
-          'flex w-full flex-col items-center justify-center gap-3 text-center',
-          className,
-        )}
-      >
+      <div className={cn('flex w-full flex-col items-center justify-center gap-3 text-center', className)}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={previewUrl}
           alt={imageFile?.name || 'Uploaded image preview'}
           className="h-32 w-32 rounded-md object-cover shadow-sm"
         />
-        <p className="w-full truncate font-medium text-sm">{imageFile?.name}</p>
-        <p className="w-full text-xs text-muted-foreground">Drag and drop or click to replace</p>
+        <p className="w-full truncate text-sm font-medium">{imageFile?.name}</p>
+        <p className="text-muted-foreground w-full text-xs">Drag and drop or click to replace</p>
       </div>
     );
   }
 
   return (
     <div className={cn('flex flex-col items-center justify-center', className)}>
-      <div className="flex size-8 items-center justify-center rounded-md bg-muted text-muted-foreground">
+      <div className="bg-muted text-muted-foreground flex size-8 items-center justify-center rounded-md">
         <UploadIcon size={16} />
       </div>
-      <p className="my-2 w-full truncate font-medium text-sm">
+      <p className="my-2 w-full truncate text-sm font-medium">
         {src.length > maxLabelItems
           ? `${new Intl.ListFormat('en').format(
-              src.slice(0, maxLabelItems).map((file) => file.name)
+              src.slice(0, maxLabelItems).map((file) => file.name),
             )} and ${src.length - maxLabelItems} more`
           : new Intl.ListFormat('en').format(src.map((file) => file.name))}
       </p>
-      <p className="w-full text-wrap text-muted-foreground text-xs">
-        Drag and drop or click to replace
-      </p>
+      <p className="text-muted-foreground w-full text-wrap text-xs">Drag and drop or click to replace</p>
     </div>
   );
 };
@@ -209,10 +187,7 @@ export type DropzoneEmptyStateProps = {
   className?: string;
 };
 
-export const DropzoneEmptyState = ({
-  children,
-  className,
-}: DropzoneEmptyStateProps) => {
+export const DropzoneEmptyState = ({ children, className }: DropzoneEmptyStateProps) => {
   const { src, accept, maxSize, minSize, maxFiles } = useDropzoneContext();
 
   if (src) {
@@ -240,18 +215,16 @@ export const DropzoneEmptyState = ({
 
   return (
     <div className={cn('flex flex-col items-center justify-center', className)}>
-      <div className="flex size-8 items-center justify-center rounded-md bg-muted text-muted-foreground">
+      <div className="bg-muted text-muted-foreground flex size-8 items-center justify-center rounded-md">
         <UploadIcon size={16} />
       </div>
-      <p className="my-2 w-full truncate text-wrap font-medium text-sm">
+      <p className="my-2 w-full truncate text-wrap text-sm font-medium">
         Upload {maxFiles === 1 ? 'a file' : 'files'}
       </p>
-      <p className="w-full truncate text-wrap text-muted-foreground text-xs">
+      <p className="text-muted-foreground w-full truncate text-wrap text-xs">
         Drag and drop or click to upload
       </p>
-      {caption && (
-        <p className="text-wrap text-muted-foreground text-xs">{caption}.</p>
-      )}
+      {caption && <p className="text-muted-foreground text-wrap text-xs">{caption}.</p>}
     </div>
   );
 };

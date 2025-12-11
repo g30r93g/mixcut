@@ -1,15 +1,13 @@
-import { CueTrack, CueValidationResult, ParsedCue } from "./lib/types";
+import { CueTrack, CueValidationResult, ParsedCue } from './lib/types';
 
 export function validateCue(parsed: ParsedCue): CueValidationResult {
   const { tracks } = parsed;
 
   if (!tracks.length) {
-    return { ok: false, error: "No tracks found in CUE sheet" };
+    return { ok: false, error: 'No tracks found in CUE sheet' };
   }
 
-  const normalized: CueTrack[] = [...tracks].sort(
-    (a, b) => a.startMs - b.startMs
-  );
+  const normalized: CueTrack[] = [...tracks].sort((a, b) => a.startMs - b.startMs);
 
   // Track numbers must be > 0 and unique
   const seenNumbers = new Set<number>();
@@ -17,25 +15,25 @@ export function validateCue(parsed: ParsedCue): CueValidationResult {
     if (!Number.isFinite(t.trackNumber) || t.trackNumber <= 0) {
       return {
         ok: false,
-        error: `Invalid track number: ${t.trackNumber}`
+        error: `Invalid track number: ${t.trackNumber}`,
       };
     }
     if (!t.title || !t.title.trim()) {
       return {
         ok: false,
-        error: `Track ${t.trackNumber} is missing a TITLE`
+        error: `Track ${t.trackNumber} is missing a TITLE`,
       };
     }
     if (!Number.isFinite(t.startMs) || t.startMs < 0) {
       return {
         ok: false,
-        error: `Track ${t.trackNumber} has invalid start time`
+        error: `Track ${t.trackNumber} has invalid start time`,
       };
     }
     if (seenNumbers.has(t.trackNumber)) {
       return {
         ok: false,
-        error: `Duplicate track number: ${t.trackNumber}`
+        error: `Duplicate track number: ${t.trackNumber}`,
       };
     }
     seenNumbers.add(t.trackNumber);
@@ -46,7 +44,7 @@ export function validateCue(parsed: ParsedCue): CueValidationResult {
     if (normalized[i].startMs <= normalized[i - 1].startMs) {
       return {
         ok: false,
-        error: `Track ${normalized[i].trackNumber} starts before or at same time as previous track`
+        error: `Track ${normalized[i].trackNumber} starts before or at same time as previous track`,
       };
     }
   }

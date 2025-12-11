@@ -1,5 +1,5 @@
-import { framesToMs } from "@mixcut/shared";
-import { CueTrack, ParsedCue } from "./lib/types";
+import { framesToMs } from '@mixcut/shared';
+import { CueTrack, ParsedCue } from './lib/types';
 
 const FILE_RE = /^FILE\s+"(.+?)"\s+(.+)$/i;
 const TRACK_RE = /^TRACK\s+(\d+)\s+(\w+)/i;
@@ -22,22 +22,18 @@ export function parseCue(cueText: string): ParsedCue {
   let currentTitle: string | undefined;
   let currentPerformer: string | undefined;
   let currentStartMs: number | undefined;
-  let overallTitle = "";
-  let overallPerformer = "";
-  let overallGenre = "";
-  let overallReleaseYear = "";
+  let overallTitle = '';
+  let overallPerformer = '';
+  let overallGenre = '';
+  let overallReleaseYear = '';
 
   const flushTrack = () => {
-    if (
-      currentTrackNumber !== undefined &&
-      currentTitle !== undefined &&
-      currentStartMs !== undefined
-    ) {
+    if (currentTrackNumber !== undefined && currentTitle !== undefined && currentStartMs !== undefined) {
       tracks.push({
         trackNumber: currentTrackNumber,
         title: currentTitle,
         performer: currentPerformer,
-        startMs: currentStartMs
+        startMs: currentStartMs,
       });
     }
   };
@@ -114,6 +110,6 @@ export function parseCue(cueText: string): ParsedCue {
     performer: overallPerformer,
     genre: overallGenre,
     releaseYear: overallReleaseYear,
-    tracks
+    tracks,
   };
 }

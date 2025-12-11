@@ -52,7 +52,7 @@ export function ConfirmUpload({
 
             return (
               <div key={label} className="space-y-1.5">
-                <div className="flex items-center justify-between text-xs uppercase tracking-wide text-muted-foreground">
+                <div className="text-muted-foreground flex items-center justify-between text-xs uppercase tracking-wide">
                   <span>{label}</span>
                   <span>{statusText}</span>
                 </div>
@@ -62,7 +62,7 @@ export function ConfirmUpload({
           })}
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+        <div className="bg-muted/40 text-muted-foreground flex flex-wrap items-center justify-between gap-3 rounded-lg border px-4 py-3 text-sm">
           <div className="flex flex-col">
             <span>
               {jobId
@@ -84,7 +84,7 @@ export function ConfirmUpload({
               {actionLabel}
             </Button>
           ) : (
-            <span className="text-xs font-medium uppercase tracking-wide text-primary">In progress</span>
+            <span className="text-primary text-xs font-medium uppercase tracking-wide">In progress</span>
           )}
         </div>
       </CardContent>

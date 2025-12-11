@@ -1,7 +1,11 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { TrackWaveform, type TrackWaveformHandle, type TrackWaveformProps } from '@/components/track-waveform';
+import {
+  TrackWaveform,
+  type TrackWaveformHandle,
+  type TrackWaveformProps,
+} from '@/components/track-waveform';
 import { TracklistEditor, type TracklistEditorProps } from '@/components/tracklist-editor';
 import type { Ref } from 'react';
 

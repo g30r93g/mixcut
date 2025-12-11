@@ -1,7 +1,7 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  transpilePackages: ["@mixcut/parser", "@mixcut/shared"],
+  transpilePackages: ['@mixcut/parser', '@mixcut/shared'],
 };
 
 export default nextConfig;

@@ -1,4 +1,4 @@
-import type { Job } from "@mixcut/shared";
+import type { Job } from '@mixcut/shared';
 
 export type JobRecord = Job;
 

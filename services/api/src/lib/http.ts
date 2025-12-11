@@ -1,24 +1,24 @@
-import type { APIGatewayProxyResult } from "aws-lambda";
+import type { APIGatewayProxyResult } from 'aws-lambda';
 
 const defaultHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "Content-Type",
-  "Access-Control-Allow-Methods": "OPTIONS,GET,POST",
-  "Content-Type": "application/json"
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Methods': 'OPTIONS,GET,POST',
+  'Content-Type': 'application/json',
 };
 
 export function json(
   statusCode: number,
   body: unknown,
-  extraHeaders: Record<string, string> = {}
+  extraHeaders: Record<string, string> = {},
 ): APIGatewayProxyResult {
   return {
     statusCode,
     headers: {
       ...defaultHeaders,
-      ...extraHeaders
+      ...extraHeaders,
     },
-    body: JSON.stringify(body)
+    body: JSON.stringify(body),
   };
 }
 
@@ -26,12 +26,12 @@ export function badRequest(message: string): APIGatewayProxyResult {
   return json(400, { error: message });
 }
 
-export function notFound(message = "Not found"): APIGatewayProxyResult {
+export function notFound(message = 'Not found'): APIGatewayProxyResult {
   return json(404, { error: message });
 }
 
 export function methodNotAllowed(): APIGatewayProxyResult {
-  return json(405, { error: "Method not allowed" });
+  return json(405, { error: 'Method not allowed' });
 }
 
 export function internalError(message: string): APIGatewayProxyResult {
