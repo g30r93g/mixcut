@@ -79,7 +79,7 @@ jobs:
             --load \
             -t mixcut-worker-ci \
             -f services/worker/Dockerfile \
-            .
+            services/worker
           if [ "$post_cache_update" = true ]; then
             # Persist the updated cache for the next run only when no cache hit.
             rm -rf /tmp/.buildx-cache
