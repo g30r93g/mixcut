@@ -32,15 +32,13 @@ export function WorkflowStepHeader({ steps, currentStep, className }: WorkflowSt
                 className="flex w-full items-center gap-3 rounded-none border-none bg-transparent p-0 text-left"
                 disabled
               >
-                <StepperIndicator className="size-8 text-base font-semibold">
-                  {index + 1}
-                </StepperIndicator>
+                <StepperIndicator className="size-8 text-base font-semibold">{index + 1}</StepperIndicator>
                 <div className="flex flex-col">
-                  <StepperTitle className="text-base font-semibold text-foreground">
+                  <StepperTitle className="text-foreground text-base font-semibold">
                     {step.title}
                   </StepperTitle>
                   {step.description ? (
-                    <p className="text-sm text-muted-foreground">{step.description}</p>
+                    <p className="text-muted-foreground text-sm">{step.description}</p>
                   ) : null}
                 </div>
               </StepperTrigger>

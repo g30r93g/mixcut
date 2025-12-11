@@ -102,7 +102,10 @@ export function TracksDownload({ jobId }: TracksDownloadProps) {
 
   const allDone = useMemo(() => {
     if (!jobState) return false;
-    return jobState.job.status === JobStatus.COMPLETED && jobState.tracks.every((track) => Boolean(track.output_key));
+    return (
+      jobState.job.status === JobStatus.COMPLETED &&
+      jobState.tracks.every((track) => Boolean(track.output_key))
+    );
   }, [jobState]);
 
   const downloadTracks = useCallback(async () => {
@@ -145,7 +148,7 @@ export function TracksDownload({ jobId }: TracksDownloadProps) {
   if (isLoading && !jobState) {
     return (
       <main className="flex h-full items-center justify-center py-10">
-        <Loader2 className="size-6 animate-spin text-muted-foreground" />
+        <Loader2 className="text-muted-foreground size-6 animate-spin" />
       </main>
     );
   }
@@ -153,7 +156,7 @@ export function TracksDownload({ jobId }: TracksDownloadProps) {
   if (error && !jobState) {
     return (
       <main className="mx-auto max-w-3xl px-4 py-10">
-        <div className="flex items-center gap-2 rounded-md bg-destructive/10 p-4 text-destructive">
+        <div className="bg-destructive/10 text-destructive flex items-center gap-2 rounded-md p-4">
           <AlertTriangle className="size-4" />
           <p className="text-sm">{error}</p>
         </div>
@@ -169,38 +172,45 @@ export function TracksDownload({ jobId }: TracksDownloadProps) {
       <CardHeader className="flex flex-row items-center justify-between gap-4">
         <div>
           <CardTitle className="text-2xl">Job {jobId}</CardTitle>
-          <CardDescription>{jobStatusLabel}{jobStatusLabel === "Completed" && " – Downloads are valid for 24 hours."}</CardDescription>
+          <CardDescription>
+            {jobStatusLabel}
+            {jobStatusLabel === 'Completed' && ' – Downloads are valid for 24 hours.'}
+          </CardDescription>
         </div>
         {jobState?.job.status === JobStatus.FAILED && (
-          <div className="flex items-center gap-2 text-destructive">
+          <div className="text-destructive flex items-center gap-2">
             <AlertTriangle className="size-4" />
             <span className="text-sm">{jobState.job.error_message ?? 'Something went wrong.'}</span>
           </div>
         )}
         {allDone && (
           <Button disabled={isDownloading} onClick={downloadTracks} size="lg">
-            {isDownloading ? <Loader2 className="size-4 animate-spin" /> : <DownloadIcon className="size-4" />}
+            {isDownloading ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <DownloadIcon className="size-4" />
+            )}
             Download tracks
           </Button>
         )}
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {!terminal && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <div className="text-muted-foreground flex items-center gap-2 text-sm">
             <Clock className="size-4" />
             Polling for updates…
           </div>
         )}
 
         {error && jobState && (
-          <div className="flex items-center gap-2 rounded-md bg-destructive/10 p-3 text-destructive">
+          <div className="bg-destructive/10 text-destructive flex items-center gap-2 rounded-md p-3">
             <AlertTriangle className="size-4" />
             <p className="text-sm">{error}</p>
           </div>
         )}
 
         <div className="overflow-hidden rounded-lg border">
-          <table className="min-w-full divide-y divide-border text-sm">
+          <table className="divide-border min-w-full divide-y text-sm">
             <thead className="bg-muted/50">
               <tr>
                 <th className="px-4 py-3 text-left font-medium">#</th>
@@ -209,14 +219,16 @@ export function TracksDownload({ jobId }: TracksDownloadProps) {
                 <th className="px-4 py-3 text-left font-medium">Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border">
+            <tbody className="divide-border divide-y">
               {jobState?.tracks.map((track) => {
                 const label = trackStatus(jobState.job.status, track);
                 return (
                   <tr key={track.id} className="hover:bg-muted/30">
-                    <td className="px-4 py-3 align-top font-mono text-xs text-muted-foreground">{track.track_number}</td>
+                    <td className="text-muted-foreground px-4 py-3 align-top font-mono text-xs">
+                      {track.track_number}
+                    </td>
                     <td className="px-4 py-3 align-top">{track.title}</td>
-                    <td className="px-4 py-3 align-top text-muted-foreground">{track.performer ?? '—'}</td>
+                    <td className="text-muted-foreground px-4 py-3 align-top">{track.performer ?? '—'}</td>
                     <td className="px-4 py-3 align-top">
                       <span
                         className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ${statusClass(

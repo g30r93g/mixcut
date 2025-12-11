@@ -1,4 +1,4 @@
-import { retryWithBackoff } from "./retry-utils";
+import { retryWithBackoff } from './retry-utils';
 
 async function uploadToPresigned(
   url: string,
@@ -37,7 +37,4 @@ async function uploadToPresigned(
   await retryWithBackoff(attemptUpload);
 }
 
-export {
-    uploadToPresigned
-};
-
+export { uploadToPresigned };

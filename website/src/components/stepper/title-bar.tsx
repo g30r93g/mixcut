@@ -9,19 +9,24 @@ import {
   StepperTrigger,
 } from '@/components/ui/stepper';
 
-const steps = [{ title: 'User Details' }, { title: 'Payment Info' }, { title: 'Auth OTP' }, { title: 'Preview Form' }];
+const steps = [
+  { title: 'User Details' },
+  { title: 'Payment Info' },
+  { title: 'Auth OTP' },
+  { title: 'Preview Form' },
+];
 
 export default function Component() {
   return (
     <Stepper defaultValue={2} className="space-y-8">
-      <StepperNav className="gap-3.5 mb-15">
+      <StepperNav className="mb-15 gap-3.5">
         {steps.map((step, index) => {
           return (
             <StepperItem key={index} step={index + 1} className="relative flex-1 items-start">
-              <StepperTrigger className="flex flex-col items-start justify-center gap-3.5 grow">
-                <StepperIndicator className="bg-border rounded-full h-1 w-full data-[state=active]:bg-primary"></StepperIndicator>
+              <StepperTrigger className="flex grow flex-col items-start justify-center gap-3.5">
+                <StepperIndicator className="bg-border data-[state=active]:bg-primary h-1 w-full rounded-full"></StepperIndicator>
                 <div className="flex flex-col items-start gap-1">
-                  <StepperTitle className="text-start font-semibold group-data-[state=inactive]/step:text-muted-foreground">
+                  <StepperTitle className="group-data-[state=inactive]/step:text-muted-foreground text-start font-semibold">
                     {step.title}
                   </StepperTitle>
                 </div>

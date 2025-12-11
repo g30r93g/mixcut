@@ -168,10 +168,7 @@ export default function UploadPage() {
     [resetCueContent],
   );
 
-  const sortedTracks = useMemo(
-    () => [...tracks].sort((a, b) => a.trackNumber - b.trackNumber),
-    [tracks],
-  );
+  const sortedTracks = useMemo(() => [...tracks].sort((a, b) => a.trackNumber - b.trackNumber), [tracks]);
 
   const throttledCurrentMs = useThrottledValue(currentMs, 100);
 
@@ -192,47 +189,47 @@ export default function UploadPage() {
     return current;
   }, [currentMs, sortedTracks, durationMs]);
 
-  const addTrack = useCallback((startMs: number | null) => {
-    const nextNumber =
-      sortedTracks.length > 0
-        ? Math.max(...sortedTracks.map((t) => t.trackNumber)) + 1
-        : 1;
-    const lastStart = sortedTracks[sortedTracks.length - 1]?.startMs ?? 0;
-    const nextStart = startMs ?? lastStart + 60_000;
-    setTracks((prev) => [
-      ...prev,
-      {
-        trackNumber: nextNumber,
-        title: `Track ${nextNumber}`,
-        performer: 'Artist',
-        startMs: nextStart,
-      },
-    ]);
-  }, [sortedTracks]);
-
-  const updateTrack = useCallback(
-    (index: number, patch: Partial<CueTrackEntry>) => {
-      setTracks((prev) => {
-        const next = [...prev];
-        next[index] = { ...next[index], ...patch };
-        return next;
-      });
+  const addTrack = useCallback(
+    (startMs: number | null) => {
+      const nextNumber =
+        sortedTracks.length > 0 ? Math.max(...sortedTracks.map((t) => t.trackNumber)) + 1 : 1;
+      const lastStart = sortedTracks[sortedTracks.length - 1]?.startMs ?? 0;
+      const nextStart = startMs ?? lastStart + 60_000;
+      setTracks((prev) => [
+        ...prev,
+        {
+          trackNumber: nextNumber,
+          title: `Track ${nextNumber}`,
+          performer: 'Artist',
+          startMs: nextStart,
+        },
+      ]);
     },
-    [],
+    [sortedTracks],
   );
+
+  const updateTrack = useCallback((index: number, patch: Partial<CueTrackEntry>) => {
+    setTracks((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], ...patch };
+      return next;
+    });
+  }, []);
 
   const removeTrack = useCallback((index: number) => {
     setTracks((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
-  const trackProgressPercent = useCallback((startMs: number, nextStartMs: number | undefined) => {
-
-    const windowEnd = nextStartMs ?? durationMs;
-    if (!Number.isFinite(windowEnd) || windowEnd <= startMs) return 0;
-    if (throttledCurrentMs < startMs) return 0;
-    const clamped = Math.min(throttledCurrentMs, windowEnd);
-    return Math.min(100, ((clamped - startMs) / (windowEnd - startMs)) * 100);
-  }, [throttledCurrentMs, durationMs]);
+  const trackProgressPercent = useCallback(
+    (startMs: number, nextStartMs: number | undefined) => {
+      const windowEnd = nextStartMs ?? durationMs;
+      if (!Number.isFinite(windowEnd) || windowEnd <= startMs) return 0;
+      if (throttledCurrentMs < startMs) return 0;
+      const clamped = Math.min(throttledCurrentMs, windowEnd);
+      return Math.min(100, ((clamped - startMs) / (windowEnd - startMs)) * 100);
+    },
+    [throttledCurrentMs, durationMs],
+  );
 
   const handleLocalAudioDrop = useCallback(
     (files: File[]) => {
@@ -304,32 +301,32 @@ export default function UploadPage() {
         )}
 
         {currentStep === 2 && (
-        <TrackWorkspace
-          waveformRef={trackWaveformRef}
-          playerUrl={playerUrl}
-          isBusy={isBusy}
-          audioFile={audioFile}
-          onLocalAudioDrop={handleLocalAudioDrop}
-          onPlayerDuration={setDurationMs}
-          onPlayerProgress={setCurrentMs}
-          currentMs={currentMs}
-          durationMs={durationMs}
-          formatTime={formatTimeLabel}
-          cueFile={cueFile}
-          onCueDrop={handleCueDrop}
-          tracks={tracks}
-          activeTrack={activeTrack}
-          trackProgressPercent={trackProgressPercent}
+          <TrackWorkspace
+            waveformRef={trackWaveformRef}
+            playerUrl={playerUrl}
+            isBusy={isBusy}
+            audioFile={audioFile}
+            onLocalAudioDrop={handleLocalAudioDrop}
+            onPlayerDuration={setDurationMs}
+            onPlayerProgress={setCurrentMs}
+            currentMs={currentMs}
+            durationMs={durationMs}
+            formatTime={formatTimeLabel}
+            cueFile={cueFile}
+            onCueDrop={handleCueDrop}
+            tracks={tracks}
+            activeTrack={activeTrack}
+            trackProgressPercent={trackProgressPercent}
             onRequestSeek={handleTrackSeek}
             onUpdateTrack={updateTrack}
             onRemoveTrack={removeTrack}
-          onAddTrack={addTrack}
-          overallDetails={overallDetails}
-          onUpdateOverall={updateOverallDetails}
-          artworkFile={artworkFile}
-          onArtworkDrop={handleArtworkDrop}
-          onContinue={() => setWorkspaceReady(true)}
-        />
+            onAddTrack={addTrack}
+            overallDetails={overallDetails}
+            onUpdateOverall={updateOverallDetails}
+            artworkFile={artworkFile}
+            onArtworkDrop={handleArtworkDrop}
+            onContinue={() => setWorkspaceReady(true)}
+          />
         )}
 
         {currentStep === 3 && (
@@ -350,7 +347,7 @@ export default function UploadPage() {
       </section>
 
       {error && (
-        <div className="flex items-center gap-2 rounded-md bg-destructive/10 p-3 text-destructive">
+        <div className="bg-destructive/10 text-destructive flex items-center gap-2 rounded-md p-3">
           <AlertTriangle className="size-4" />
           <p className="text-sm">{error}</p>
         </div>

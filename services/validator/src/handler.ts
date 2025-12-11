@@ -1,10 +1,10 @@
-import { GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
-import { SQSClient, SendMessageCommand } from "@aws-sdk/client-sqs";
-import { parseCue, validateCue } from "@mixcut/parser";
-import type { WorkerMessage } from "@mixcut/shared";
+import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { SQSClient, SendMessageCommand } from '@aws-sdk/client-sqs';
+import { parseCue, validateCue } from '@mixcut/parser';
+import type { WorkerMessage } from '@mixcut/shared';
 
-import { supabase } from "./lib/supabase";
-import { ValidatorEvent } from "./lib/types";
+import { supabase } from './lib/supabase';
+import { ValidatorEvent } from './lib/types';
 
 const s3 = new S3Client({});
 const sqs = new SQSClient({});
@@ -17,22 +17,18 @@ export const handler = async (event: ValidatorEvent) => {
 
   try {
     // 1. Load job from Supabase
-    const { data: job, error: jobErr } = await supabase
-      .from("jobs")
-      .select("*")
-      .eq("id", jobId)
-      .single();
+    const { data: job, error: jobErr } = await supabase.from('jobs').select('*').eq('id', jobId).single();
 
     if (jobErr || !job) {
-      throw new Error("Job not found in Supabase");
+      throw new Error('Job not found in Supabase');
     }
 
     // 2. Fetch CUE file from S3
     const cueObject = await s3.send(
       new GetObjectCommand({
         Bucket: job.cue_bucket,
-        Key: job.cue_key
-      })
+        Key: job.cue_key,
+      }),
     );
 
     const cueText = await cueObject.Body!.transformToString();
@@ -54,12 +50,10 @@ export const handler = async (event: ValidatorEvent) => {
       track_number: t.trackNumber,
       title: t.title,
       performer: t.performer ?? null,
-      start_ms: t.startMs
+      start_ms: t.startMs,
     }));
 
-    const { error: insertErr } = await supabase
-      .from("job_tracks")
-      .insert(insertPayload);
+    const { error: insertErr } = await supabase.from('job_tracks').insert(insertPayload);
 
     if (insertErr) {
       throw insertErr;
@@ -73,19 +67,19 @@ export const handler = async (event: ValidatorEvent) => {
       artworkBucket: job.artwork_bucket,
       artworkKey: job.artwork_key,
       cueBucket: job.cue_bucket,
-      cueKey: job.cue_key
+      cueKey: job.cue_key,
     };
 
     await sqs.send(
       new SendMessageCommand({
         QueueUrl: JOBS_QUEUE_URL,
-        MessageBody: JSON.stringify(msgBody)
-      })
+        MessageBody: JSON.stringify(msgBody),
+      }),
     );
 
     // 6. Update job status → QUEUED
     await updateJob(jobId, {
-      status: "QUEUED"
+      status: 'QUEUED',
     });
 
     return { ok: true };
@@ -98,16 +92,16 @@ export const handler = async (event: ValidatorEvent) => {
 /** Helpers */
 async function updateJob(jobId: string, patch: Record<string, any>) {
   const { error } = await supabase
-    .from("jobs")
+    .from('jobs')
     .update({ ...patch, updated_at: new Date().toISOString() })
-    .eq("id", jobId);
+    .eq('id', jobId);
 
   if (error) throw error;
 }
 
 async function failJob(jobId: string, message: string) {
   await updateJob(jobId, {
-    status: "FAILED",
-    error_message: message
+    status: 'FAILED',
+    error_message: message,
   });
 }

@@ -1,7 +1,7 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ error: string }> }) {
-  const params = await searchParams
+  const params = await searchParams;
 
   return (
     <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
@@ -13,14 +13,14 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ e
             </CardHeader>
             <CardContent>
               {params?.error ? (
-                <p className="text-sm text-muted-foreground">Code error: {params.error}</p>
+                <p className="text-muted-foreground text-sm">Code error: {params.error}</p>
               ) : (
-                <p className="text-sm text-muted-foreground">An unspecified error occurred.</p>
+                <p className="text-muted-foreground text-sm">An unspecified error occurred.</p>
               )}
             </CardContent>
           </Card>
         </div>
       </div>
     </div>
-  )
+  );
 }

@@ -1,4 +1,4 @@
-import { createClient } from "./supabase/server";
+import { createClient } from './supabase/server';
 
 async function requireUserId() {
   const supabase = await createClient();
@@ -14,6 +14,4 @@ async function requireUserId() {
   return user.id;
 }
 
-export {
-    requireUserId
-};
+export { requireUserId };

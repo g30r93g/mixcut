@@ -12,9 +12,14 @@ export async function POST(request: Request) {
   try {
     const body = await request.text();
     const contentType = request.headers.get('content-type') ?? undefined;
-    const headers = buildGatewayHeaders(undefined, contentType ? {
-      'content-type': contentType
-    } : undefined);
+    const headers = buildGatewayHeaders(
+      undefined,
+      contentType
+        ? {
+            'content-type': contentType,
+          }
+        : undefined,
+    );
 
     const response = await retryWithBackoff(() =>
       fetch(gatewayUrl('/jobs'), {
