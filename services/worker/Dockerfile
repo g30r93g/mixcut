@@ -7,7 +7,7 @@ ENV INSTALL_ROOT=/opt/m4acut
 
 RUN yum update -y && \
     yum install -y git gcc gcc-c++ make autoconf automake libtool pkgconfig yasm which curl unzip && \
-    yum clean all && rm -rf /var/cache/yum
+    yum clean all && rm -rf /var/cache/yum /var/cache/dnf
 
 WORKDIR /build
 
