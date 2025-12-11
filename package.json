@@ -14,14 +14,22 @@
     "worker:bundle": "pnpm -F worker build && docker build --platform linux/amd64 services/worker",
     "validator:bundle": "pnpm -F validator build",
     "website:build": "pnpm -F website build",
-    "website:dev": "pnpm -F website dev"
+    "website:dev": "pnpm -F website dev",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "eslint-config-prettier": "^9.1.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
     "prettier": "^3.3.3",
     "prettier-plugin-tailwindcss": "^0.6.10",
     "typescript": "^5.6.3"
+  },
+  "lint-staged": {
+    "**/*.{cjs,js,mjs,ts,tsx,jsx,json,md,css,scss,html}": [
+      "pnpm exec prettier --write --ignore-unknown"
+    ]
   },
   "packageManager": "pnpm@10.18.2"
 }

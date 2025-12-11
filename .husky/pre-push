@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+
+set -euo pipefail
+
+pnpm run -r lint
+# pnpm run -r test
+pnpm format:check
