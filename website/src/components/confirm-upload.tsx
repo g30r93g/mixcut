@@ -1,5 +1,7 @@
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import type { Stage } from '@/types/jobs';
 import { Loader2, Scissors, Upload } from 'lucide-react';
 
 type ConfirmUploadProps = {
@@ -11,6 +13,7 @@ type ConfirmUploadProps = {
   audioProgress: number | null;
   artworkProgress: number | null;
   cueProgress: number | null;
+  stage: Stage;
 };
 
 export function ConfirmUpload({
@@ -22,6 +25,7 @@ export function ConfirmUpload({
   audioProgress,
   artworkProgress,
   cueProgress,
+  stage,
 }: ConfirmUploadProps) {
   const progressItems = [
     { label: 'Track', value: audioProgress },
@@ -29,54 +33,62 @@ export function ConfirmUpload({
     { label: 'CUE Sheet', value: cueProgress },
   ];
 
+  const canTriggerAction = stage !== 'started';
+
   return (
-    <div className="flex flex-col gap-4 rounded-lg border bg-card p-4 shadow-sm">
-      <div className="flex items-center gap-2 text-2xl font-semibold">
-        <Scissors className="size-5" /> Confirm Upload
-      </div>
-      <p className="text-sm text-muted-foreground">
-        Upload your CUE sheet and matching local audio file.
-      </p>
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-2xl">
+          <Scissors className="size-5" /> Upload &amp; Cut
+        </CardTitle>
+        <CardDescription>Upload your prepared files and kick off the cutting job.</CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-5">
+        <div className="grid gap-3">
+          {progressItems.map(({ label, value }) => {
+            const hasProgress = typeof value === 'number';
+            const displayValue = hasProgress ? Math.round(value) : 0;
+            const statusText = hasProgress ? `${displayValue}%` : 'Waiting';
 
-      <div className="grid gap-3">
-        {progressItems.map(({ label, value }) => {
-          const hasProgress = typeof value === 'number';
-          const displayValue = hasProgress ? Math.round(value) : 0;
-          const statusText = hasProgress ? `${displayValue}%` : 'Waiting';
-
-          return (
-            <div key={label} className="space-y-1.5">
-              <div className="flex items-center justify-between text-xs uppercase tracking-wide text-muted-foreground">
-                <span>{label}</span>
-                <span>{statusText}</span>
+            return (
+              <div key={label} className="space-y-1.5">
+                <div className="flex items-center justify-between text-xs uppercase tracking-wide text-muted-foreground">
+                  <span>{label}</span>
+                  <span>{statusText}</span>
+                </div>
+                <Progress value={displayValue} className="h-2" />
               </div>
-              <Progress value={displayValue} className="h-2" />
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-col gap-2 text-sm text-muted-foreground">
-          <div>Source: Local file upload</div>
-          <div>
-            {jobId
-              ? `Ready to start job ${jobId}`
-              : 'Uploads will be named source.m4a/source.cue under the job prefix.'}
-          </div>
+            );
+          })}
         </div>
-        <Button disabled={actionDisabled} onClick={onAction} size="lg">
-          {isBusy ? (
-            <LoaderIcon />
-          ) : actionLabel === 'Cut' ? (
-            <Scissors className="size-4" />
+
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+          <div className="flex flex-col">
+            <span>
+              {jobId
+                ? stage === 'started'
+                  ? `Job ${jobId} is processing. Monitor progress below.`
+                  : `Ready to start job ${jobId}`
+                : 'Uploads will be named source.m4a/source.cue under the job prefix.'}
+            </span>
+          </div>
+          {canTriggerAction ? (
+            <Button disabled={actionDisabled} onClick={onAction} size="lg">
+              {isBusy ? (
+                <LoaderIcon />
+              ) : actionLabel === 'Cut' ? (
+                <Scissors className="size-4" />
+              ) : (
+                <Upload className="size-4" />
+              )}
+              {actionLabel}
+            </Button>
           ) : (
-            <Upload className="size-4" />
+            <span className="text-xs font-medium uppercase tracking-wide text-primary">In progress</span>
           )}
-          {actionLabel}
-        </Button>
-      </div>
-    </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
