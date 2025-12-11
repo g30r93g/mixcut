@@ -1,11 +1,11 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import type { JobStatusResponse, Track } from '@mixcut/shared';
 import { JobStatus } from '@mixcut/shared';
 import { AlertTriangle, CheckCircle2, Clock, Download as DownloadIcon, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 const pollIntervalMs = 1000;
 
@@ -169,7 +169,7 @@ export function TracksDownload({ jobId }: TracksDownloadProps) {
       <CardHeader className="flex flex-row items-center justify-between gap-4">
         <div>
           <CardTitle className="text-2xl">Job {jobId}</CardTitle>
-          <CardDescription>{jobStatusLabel}</CardDescription>
+          <CardDescription>{jobStatusLabel}{jobStatusLabel === "Completed" && " – Downloads are valid for 24 hours."}</CardDescription>
         </div>
         {jobState?.job.status === JobStatus.FAILED && (
           <div className="flex items-center gap-2 text-destructive">

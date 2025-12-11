@@ -40,7 +40,6 @@ export type TracklistEditorProps = {
     currentMs: number;
     formatTime: (ms: number) => string;
     cueFile: File | null;
-    cueProgress: number | null;
     onCueDrop: (files: File[]) => void;
     tracks: CueTrackEntry[];
     activeTrack: CueTrackEntry | null;
@@ -52,7 +51,6 @@ export type TracklistEditorProps = {
     overallDetails: OverallDetails;
     onUpdateOverall: (patch: Partial<OverallDetails>) => void;
     artworkFile: File | null;
-    artworkProgress: number | null;
     onArtworkDrop: (files: File[]) => void;
 };
 
@@ -61,7 +59,6 @@ export function TracklistEditor({
     currentMs,
     formatTime,
     cueFile,
-    cueProgress,
     onCueDrop,
     tracks,
     activeTrack,
@@ -73,7 +70,6 @@ export function TracklistEditor({
     overallDetails,
     onUpdateOverall,
     artworkFile,
-    artworkProgress,
     onArtworkDrop,
 }: TracklistEditorProps) {
     const sortedTracks = useMemo(

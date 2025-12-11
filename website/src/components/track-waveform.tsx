@@ -27,7 +27,6 @@ export type TrackWaveformProps = {
     playerUrl: string | undefined;
     isBusy: boolean;
     audioFile: File | null;
-    audioProgress: number | null;
     onLocalAudioDrop: (files: File[]) => void;
     onPlayerDuration: (ms: number) => void;
     onPlayerProgress: (ms: number) => void;
@@ -42,7 +41,6 @@ export const TrackWaveform = forwardRef<TrackWaveformHandle, TrackWaveformProps>
             playerUrl,
             isBusy,
             audioFile,
-            audioProgress,
             onLocalAudioDrop,
             onPlayerDuration,
             onPlayerProgress,

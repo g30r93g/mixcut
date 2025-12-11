@@ -17,7 +17,6 @@ export function TrackWorkspace({
   playerUrl,
   isBusy,
   audioFile,
-  audioProgress,
   onLocalAudioDrop,
   onPlayerDuration,
   onPlayerProgress,
@@ -25,7 +24,6 @@ export function TrackWorkspace({
   durationMs,
   formatTime,
   cueFile,
-  cueProgress,
   onCueDrop,
   tracks,
   activeTrack,
@@ -37,7 +35,6 @@ export function TrackWorkspace({
   overallDetails,
   onUpdateOverall,
   artworkFile,
-  artworkProgress,
   onArtworkDrop,
   onContinue,
   continueLabel = 'Continue',
@@ -53,7 +50,6 @@ export function TrackWorkspace({
         playerUrl={playerUrl}
         isBusy={isBusy}
         audioFile={audioFile}
-        audioProgress={audioProgress}
         onLocalAudioDrop={onLocalAudioDrop}
         onPlayerDuration={onPlayerDuration}
         onPlayerProgress={onPlayerProgress}
@@ -67,7 +63,6 @@ export function TrackWorkspace({
         currentMs={currentMs}
         formatTime={formatTime}
         cueFile={cueFile}
-        cueProgress={cueProgress}
         onCueDrop={onCueDrop}
         tracks={tracks}
         activeTrack={activeTrack}
@@ -79,7 +74,6 @@ export function TrackWorkspace({
         overallDetails={overallDetails}
         onUpdateOverall={onUpdateOverall}
         artworkFile={artworkFile}
-        artworkProgress={artworkProgress}
         onArtworkDrop={onArtworkDrop}
       />
 
