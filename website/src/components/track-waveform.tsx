@@ -223,7 +223,7 @@ export const TrackWaveform = forwardRef<TrackWaveformHandle, TrackWaveformProps>
                   {formatTime(durationMs)}
                 </div>
                 <label className="flex flex-col gap-2">
-                  <span className="text-muted-foreground/80 text-xs uppercase tracking-wide">
+                  <span className="text-muted-foreground/80 text-xs tracking-wide uppercase">
                     Zoom ({Math.round(minPxPerSec)}px/s)
                   </span>
                   <input

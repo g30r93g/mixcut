@@ -52,7 +52,7 @@ export function ConfirmUpload({
 
             return (
               <div key={label} className="space-y-1.5">
-                <div className="text-muted-foreground flex items-center justify-between text-xs uppercase tracking-wide">
+                <div className="text-muted-foreground flex items-center justify-between text-xs tracking-wide uppercase">
                   <span>{label}</span>
                   <span>{statusText}</span>
                 </div>
@@ -84,7 +84,7 @@ export function ConfirmUpload({
               {actionLabel}
             </Button>
           ) : (
-            <span className="text-primary text-xs font-medium uppercase tracking-wide">In progress</span>
+            <span className="text-primary text-xs font-medium tracking-wide uppercase">In progress</span>
           )}
         </div>
       </CardContent>
