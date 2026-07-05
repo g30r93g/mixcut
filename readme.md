@@ -1,4 +1,8 @@
-# mixcut
+**Important Notice**: This project has been replaced by [mixcut-electron](https://github.com/g30r93g/mixcut-electron).
+
+---
+
+# mixcut-web
 
 mixcut is a web-based tool for splitting long .m4a audio files into individual tracks using a CUE sheet.
 Users can upload a single large audio file and its corresponding .cue file, or use the built-in waveform player + tracklist editor to build a new cue sheet, and mixcut returns properly segmented .m4a tracks (optionally with embedded artwork).
